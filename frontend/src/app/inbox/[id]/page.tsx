@@ -12,6 +12,8 @@ import {
   Chip,
 } from '@mui/material';
 import DashboardLayout from '@/components/DashboardLayout';
+import { getInboxById } from '@/lib/inboxes';
+import { notFound } from 'next/navigation';
 
 const threadsData = [
   {
@@ -64,13 +66,17 @@ const threadsData = [
   },
 ];
 
-export default function InboxPage({ params }: { params: { type: string } }) {
-  const inboxType = params.type.charAt(0).toUpperCase() + params.type.slice(1);
+export default function InboxPage({ params }: { params: { id: string } }) {
+  const inbox = getInboxById(params.id);
+
+  if (!inbox) {
+    notFound();
+  }
 
   return (
     <DashboardLayout>
       <Typography variant="h4" sx={{ mb: 4, color: 'white', fontWeight: 400 }}>
-        {inboxType} Threads
+        {inbox.name} Threads
       </Typography>
 
       <TableContainer sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>

@@ -15,6 +15,7 @@ import {
   Chip,
 } from '@mui/material';
 import DashboardLayout from '@/components/DashboardLayout';
+import { getInboxById } from '@/lib/inboxes';
 
 const statsData = [
   { label: 'Active Threads', value: '67' },
@@ -27,48 +28,42 @@ const statsData = [
 const threadsData = [
   {
     title: 'Issue with recent order delivery',
-    inbox: 'Support',
-    inboxColor: '#ff9800',
+    inboxId: '550e8400-e29b-41d4-a716-446655440001',
     classification: 'Non-Critical',
     classificationColor: '#2196f3',
     duration: '12 days',
   },
   {
     title: 'Question about invoice details',
-    inbox: 'Accounting',
-    inboxColor: '#4caf50',
+    inboxId: '550e8400-e29b-41d4-a716-446655440002',
     classification: 'Non-Critical',
     classificationColor: '#2196f3',
     duration: '6 days',
   },
   {
     title: 'Request for account information',
-    inbox: 'Support',
-    inboxColor: '#ff9800',
+    inboxId: '550e8400-e29b-41d4-a716-446655440001',
     classification: 'Non-Critical',
     classificationColor: '#2196f3',
     duration: '19 days',
   },
   {
     title: 'Unable to log into account',
-    inbox: 'Support',
-    inboxColor: '#ff9800',
+    inboxId: '550e8400-e29b-41d4-a716-446655440001',
     classification: 'Critical',
     classificationColor: '#f44336',
     duration: '11 hours',
   },
   {
     title: 'Change of contact information',
-    inbox: 'HR',
-    inboxColor: '#9c27b0',
+    inboxId: '550e8400-e29b-41d4-a716-446655440003',
     classification: 'Non-Critical',
     classificationColor: '#2196f3',
     duration: '67 days',
   },
   {
     title: 'Incorrect charge on account',
-    inbox: 'Accounting',
-    inboxColor: '#4caf50',
+    inboxId: '550e8400-e29b-41d4-a716-446655440002',
     classification: 'Non-Critical',
     classificationColor: '#2196f3',
     duration: '9 days',
@@ -118,32 +113,35 @@ export default function DashboardPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {threadsData.map((thread, index) => (
-              <TableRow key={index} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
-                <TableCell sx={{ color: 'white' }}>{thread.title}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={thread.inbox}
-                    sx={{
-                      bgcolor: thread.inboxColor,
-                      color: 'white',
-                      fontWeight: 600,
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={thread.classification}
-                    sx={{
-                      bgcolor: thread.classificationColor,
-                      color: 'white',
-                      fontWeight: 600,
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ color: 'white' }}>{thread.duration}</TableCell>
-              </TableRow>
-            ))}
+            {threadsData.map((thread, index) => {
+              const inbox = getInboxById(thread.inboxId);
+              return (
+                <TableRow key={index} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
+                  <TableCell sx={{ color: 'white' }}>{thread.title}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={inbox?.name || 'Unknown'}
+                      sx={{
+                        bgcolor: inbox?.color || '#666666',
+                        color: 'white',
+                        fontWeight: 600,
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={thread.classification}
+                      sx={{
+                        bgcolor: thread.classificationColor,
+                        color: 'white',
+                        fontWeight: 600,
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ color: 'white' }}>{thread.duration}</TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>
