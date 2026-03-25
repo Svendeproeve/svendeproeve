@@ -15,6 +15,7 @@ import {
 import { IoSpeedometer, IoMail, IoSettings, IoExtensionPuzzle, IoPeople, IoLogOut, IoChevronUp, IoChevronDown } from 'react-icons/io5';
 import { IconType } from 'react-icons';
 import Link from 'next/link';
+import { inboxes } from '@/lib/inboxes';
 
 const drawerWidth = 220;
 
@@ -40,11 +41,11 @@ const menuItems: MenuItem[] = [
   {
     label: 'Inboxes',
     icon: IoMail,
-    submenu: [
-      { label: 'Support', href: '/inbox/support', color: '#ff9800' },
-      { label: 'Accounting', href: '/inbox/accounting', color: '#4caf50' },
-      { label: 'HR', href: '/inbox/hr', color: '#9c27b0' },
-    ],
+    submenu: inboxes.map(inbox => ({
+      label: inbox.name,
+      href: `/inbox/${inbox.id}`,
+      color: inbox.color,
+    })),
   },
   {
     label: 'AI Settings',
