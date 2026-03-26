@@ -25,7 +25,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
-
 app.include_router(auth_router)
 app.include_router(organizations_router)
 app.include_router(inboxes_router)
