@@ -83,7 +83,7 @@ export default function DashboardPage() {
 
       <Grid container spacing={2} sx={{ mb: 4 }}>
         {statsData.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={2.4} key={index}>
+          <Grid size={{ xs: 12, sm: 6, md: 2.4 }} key={index}>
             <Card sx={{ bgcolor: '#4a4a4a', textAlign: 'center' }}>
               <CardContent>
                 <Typography variant="h3" sx={{ color: 'white', fontWeight: 400, mb: 1 }}>
