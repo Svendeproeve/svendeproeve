@@ -1,0 +1,29 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: sortr-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sortr-api
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+
+volumes:
+  mongo_data:
