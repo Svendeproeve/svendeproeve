@@ -1,0 +1,95 @@
+name: Playwright Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Create backend .env file
+        run: |
+          cd backend
+          cat > .env << EOF
+          MONGODB_URI=mongodb://localhost:27017
+          MONGODB_DB=sortr_test
+          JWT_SECRET=test-secret-key-for-ci
+          JWT_ALGORITHM=HS256
+          JWT_EXPIRE_MINUTES=60
+          EOF
+
+      - name: Start FastAPI backend
+        run: |
+          cd backend
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          echo "Waiting for backend to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8000/health > /dev/null; then
+              echo "Backend is up!"
+              break
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 1
+          done
+          curl http://localhost:8000/health || exit 1
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install chromium --with-deps
+
+      - name: Run tests
+        working-directory: ./frontend
+        run: npm test
+        env:
+          BASE_URL: http://localhost:3000
+          API_URL: http://localhost:8000
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-report
+          path: frontend/playwright-report/
+          retention-days: 7
