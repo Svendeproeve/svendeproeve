@@ -61,7 +61,6 @@ async function globalSetup(config: FullConfig) {
 
   console.log("Starting backend with test database...");
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
-  const mongoUri = isCI ? "mongodb://localhost:27017" : "mongodb://localhost:27018";
 
   backendProcess = spawn(
     pythonCmd,
@@ -72,7 +71,7 @@ async function globalSetup(config: FullConfig) {
       shell: true,
       env: {
         ...process.env,
-        MONGODB_URI: mongoUri,
+        MONGODB_URI: isCI ? "mongodb://localhost:27017" : "mongodb://localhost:27018",
         MONGODB_DB: testDbName,
       },
     },
