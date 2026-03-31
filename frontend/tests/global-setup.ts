@@ -10,48 +10,58 @@ async function globalSetup(config: FullConfig) {
   const apiUrl = process.env.API_URL || "http://localhost:8000";
   const projectRoot = path.join(__dirname, "../..");
   const backendDir = path.join(projectRoot, "backend");
+  const isCI = !!process.env.CI;
 
   const testDbName = `sortr_test_${randomUUID().replace(/-/g, "")}`;
   console.log("Starting global test setup...");
   console.log(`Test database: ${testDbName}`);
+  console.log(`CI environment: ${isCI}`);
 
-  console.log("Ensuring MongoDB test container is running...");
-  try {
-    const result = execSync("docker ps --filter name=sortr-mongodb-test --format {{.Names}}", {
-      encoding: "utf-8",
-    });
+  if (!isCI) {
+    console.log("Ensuring MongoDB test container is running...");
 
-    if (!result.includes("sortr-mongodb-test")) {
+    const dockerComposeCmd = "docker-compose";
+
+    try {
+      const result = execSync("docker ps --filter name=sortr-mongodb-test --format {{.Names}}", {
+        encoding: "utf-8",
+      });
+
+      if (!result.includes("sortr-mongodb-test")) {
+        console.log("Starting MongoDB test container...");
+        execSync(`${dockerComposeCmd} -f docker-compose.test.yml up -d`, {
+          cwd: projectRoot,
+          stdio: "inherit",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+      } else {
+        console.log("MongoDB container already running");
+      }
+    } catch (error) {
       console.log("Starting MongoDB test container...");
-      execSync("docker-compose -f docker-compose.test.yml up -d", {
+      execSync(`${dockerComposeCmd} -f docker-compose.test.yml up -d`, {
         cwd: projectRoot,
         stdio: "inherit",
       });
       await new Promise((resolve) => setTimeout(resolve, 10000));
-    } else {
-      console.log("MongoDB container already running");
     }
-  } catch (error) {
-    console.log("Starting MongoDB test container...");
-    execSync("docker-compose -f docker-compose.test.yml up -d", {
-      cwd: projectRoot,
-      stdio: "inherit",
-    });
-    await new Promise((resolve) => setTimeout(resolve, 10000));
-  }
 
-  console.log(`Cleaning database: ${testDbName}...`);
-  try {
-    execSync(`docker exec sortr-mongodb-test mongosh --eval "db.getSiblingDB('${testDbName}').dropDatabase()"`, {
-      encoding: "utf-8",
-    });
-    console.log("Database cleaned");
-  } catch (error) {
-    console.log("Database doesn't exist yet, will be created fresh");
+    console.log(`Cleaning database: ${testDbName}...`);
+    try {
+      execSync(`docker exec sortr-mongodb-test mongosh --eval "db.getSiblingDB('${testDbName}').dropDatabase()"`, {
+        encoding: "utf-8",
+      });
+      console.log("Database cleaned");
+    } catch (error) {
+      console.log("Database doesn't exist yet, will be created fresh");
+    }
+  } else {
+    console.log("Skipping MongoDB container setup in CI (using GitHub Actions service)");
   }
 
   console.log("Starting backend with test database...");
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
+  const mongoUri = isCI ? "mongodb://localhost:27017" : "mongodb://localhost:27018";
 
   backendProcess = spawn(
     pythonCmd,
@@ -62,7 +72,7 @@ async function globalSetup(config: FullConfig) {
       shell: true,
       env: {
         ...process.env,
-        MONGODB_URI: "mongodb://localhost:27018",
+        MONGODB_URI: mongoUri,
         MONGODB_DB: testDbName,
       },
     },
@@ -126,13 +136,26 @@ async function globalSetup(config: FullConfig) {
     if (backendProcess) {
       backendProcess.kill();
     }
-    execSync("docker-compose -f docker-compose.test.yml down -v", {
-      cwd: projectRoot,
-    });
+    if (!isCI) {
+      execSync("docker-compose -f docker-compose.test.yml down -v", {
+        cwd: projectRoot,
+      });
+    }
     throw new Error("Backend startup timeout");
   }
 
   global.__BACKEND_PROCESS__ = backendProcess;
+
+  const dbInfoPath = path.join(__dirname, ".test-db-info.json");
+  const mongoUri = isCI ? "mongodb://localhost:27017" : "mongodb://localhost:27018";
+  fs.writeFileSync(
+    dbInfoPath,
+    JSON.stringify({
+      mongoUri,
+      dbName: testDbName,
+    }),
+  );
+
   console.log("Test environment ready!");
 }
 
