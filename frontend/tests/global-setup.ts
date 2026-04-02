@@ -1,5 +1,6 @@
 import { chromium, FullConfig } from "@playwright/test";
-import { spawn, ChildProcess } from "child_process";
+import { execSync, spawn, ChildProcess } from "child_process";
+import { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
 
@@ -7,42 +8,59 @@ let backendProcess: ChildProcess | null = null;
 
 async function globalSetup(config: FullConfig) {
   const apiUrl = process.env.API_URL || "http://localhost:8000";
-  const backendDir = path.join(__dirname, "../../backend");
+  const projectRoot = path.join(__dirname, "../..");
+  const backendDir = path.join(projectRoot, "backend");
+  const isCI = !!process.env.CI;
 
+  const testDbName = `sortr_test_${randomUUID().replace(/-/g, "")}`;
   console.log("Starting global test setup...");
+  console.log(`Test database: ${testDbName}`);
+  console.log(`CI environment: ${isCI}`);
 
-  if (!fs.existsSync(backendDir)) {
-    console.log("Backend directory not found, skipping backend startup");
-    return;
+  if (!isCI) {
+    console.log("Ensuring MongoDB test container is running...");
+
+    const dockerComposeCmd = "docker-compose";
+
+    try {
+      const result = execSync("docker ps --filter name=sortr-mongodb-test --format {{.Names}}", {
+        encoding: "utf-8",
+      });
+
+      if (!result.includes("sortr-mongodb-test")) {
+        console.log("Starting MongoDB test container...");
+        execSync(`${dockerComposeCmd} -f docker-compose.test.yml up -d`, {
+          cwd: projectRoot,
+          stdio: "inherit",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+      } else {
+        console.log("MongoDB container already running");
+      }
+    } catch (error) {
+      console.log("Starting MongoDB test container...");
+      execSync(`${dockerComposeCmd} -f docker-compose.test.yml up -d`, {
+        cwd: projectRoot,
+        stdio: "inherit",
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+    }
+
+    console.log(`Cleaning database: ${testDbName}...`);
+    try {
+      execSync(`docker exec sortr-mongodb-test mongosh --eval "db.getSiblingDB('${testDbName}').dropDatabase()"`, {
+        encoding: "utf-8",
+      });
+      console.log("Database cleaned");
+    } catch (error) {
+      console.log("Database doesn't exist yet, will be created fresh");
+    }
+  } else {
+    console.log("Skipping MongoDB container setup in CI (using GitHub Actions service)");
   }
 
-  const envFile = path.join(backendDir, ".env");
-  const envTestFile = path.join(backendDir, ".env.test");
-
-  if (!fs.existsSync(envFile) && fs.existsSync(envTestFile)) {
-    console.log("Copying .env.test to .env");
-    fs.copyFileSync(envTestFile, envFile);
-  }
-
-  console.log("Checking Python installation...");
+  console.log("Starting backend with test database...");
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
-
-  try {
-    const { execSync } = require("child_process");
-    const pythonVersion = execSync(`${pythonCmd} --version`, {
-      encoding: "utf-8",
-    });
-    console.log(`   Found: ${pythonVersion.trim()}`);
-  } catch (error) {
-    console.error("Python not found! Please install Python 3.11+");
-    throw new Error("Python not available");
-  }
-
-  console.log("Starting FastAPI backend...");
-  console.log(`Working directory: ${backendDir}`);
-  console.log(
-    `Command: ${pythonCmd} -m uvicorn app.main:app --host 0.0.0.0 --port 8000`,
-  );
 
   backendProcess = spawn(
     pythonCmd,
@@ -51,39 +69,33 @@ async function globalSetup(config: FullConfig) {
       cwd: backendDir,
       stdio: "pipe",
       shell: true,
-      env: { ...process.env },
+      env: {
+        ...process.env,
+        MONGODB_URI: isCI ? "mongodb://localhost:27017" : "mongodb://localhost:27018",
+        MONGODB_DB: testDbName,
+      },
     },
   );
 
   backendProcess.on("error", (error) => {
-    console.error(`Failed to start backend process: ${error.message}`);
-  });
-
-  backendProcess.on("exit", (code, signal) => {
-    if (code !== null && code !== 0) {
-      console.error(`Backend process exited with code ${code}`);
-    }
+    console.error(`Failed to start backend: ${error.message}`);
   });
 
   if (backendProcess.stdout) {
     backendProcess.stdout.on("data", (data) => {
-      const output = data.toString().trim();
-      console.log(`[Backend] ${output}`);
+      console.log(`[Backend] ${data.toString().trim()}`);
     });
   }
 
   if (backendProcess.stderr) {
     backendProcess.stderr.on("data", (data) => {
-      const output = data.toString().trim();
-      console.error(`[Backend Error] ${output}`);
+      console.error(`[Backend] ${data.toString().trim()}`);
     });
   }
 
-  console.log("Waiting for backend to be ready...");
-  console.log(`Checking health at: ${apiUrl}/health`);
-
   await new Promise((resolve) => setTimeout(resolve, 3000));
 
+  console.log("Checking backend health...");
   const browser = await chromium.launch();
   const page = await browser.newPage();
 
@@ -123,10 +135,27 @@ async function globalSetup(config: FullConfig) {
     if (backendProcess) {
       backendProcess.kill();
     }
+    if (!isCI) {
+      execSync("docker-compose -f docker-compose.test.yml down -v", {
+        cwd: projectRoot,
+      });
+    }
     throw new Error("Backend startup timeout");
   }
 
   global.__BACKEND_PROCESS__ = backendProcess;
+
+  const dbInfoPath = path.join(__dirname, ".test-db-info.json");
+  const mongoUri = isCI ? "mongodb://localhost:27017" : "mongodb://localhost:27018";
+  fs.writeFileSync(
+    dbInfoPath,
+    JSON.stringify({
+      mongoUri,
+      dbName: testDbName,
+    }),
+  );
+
+  console.log("Test environment ready!");
 }
 
 export default globalSetup;

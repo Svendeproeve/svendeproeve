@@ -1,4 +1,6 @@
 import { FullConfig } from "@playwright/test";
+import { execSync } from "child_process";
+import path from "path";
 
 async function globalTeardown(config: FullConfig) {
   console.log("Running global teardown...");
@@ -7,21 +9,20 @@ async function globalTeardown(config: FullConfig) {
 
   if (backendProcess) {
     console.log("Stopping backend...");
-
     if (process.platform === "win32") {
-      spawn("taskkill", ["/pid", backendProcess.pid!.toString(), "/f", "/t"]);
+      try {
+        execSync(`taskkill /pid ${backendProcess.pid} /f /t`);
+      } catch (error) {
+        console.log("Backend already stopped");
+      }
     } else {
       backendProcess.kill("SIGTERM");
     }
-
     await new Promise((resolve) => setTimeout(resolve, 2000));
     console.log("Backend stopped");
   }
-}
 
-function spawn(command: string, args: string[]) {
-  const { spawn: nodeSpawn } = require("child_process");
-  return nodeSpawn(command, args, { shell: true });
+  console.log("Keeping MongoDB container running for next test run");
 }
 
 export default globalTeardown;

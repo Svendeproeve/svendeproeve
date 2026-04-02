@@ -1,20 +1,14 @@
-version: '3.8'
-
 services:
-  mongodb:
+  mongodb-test:
     image: mongo:7
     container_name: sortr-mongodb-test
     ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_test_data:/data/db
+      - "27018:27017"
     environment:
-      - MONGO_INITDB_DATABASE=sortr_test
+      MONGO_INITDB_DATABASE: sortr_test
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  mongodb_test_data:
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s

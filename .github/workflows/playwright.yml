@@ -45,32 +45,6 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r backend/requirements.txt
 
-      - name: Create backend .env file
-        run: |
-          cd backend
-          cat > .env << EOF
-          MONGODB_URI=mongodb://localhost:27017
-          MONGODB_DB=sortr_test
-          JWT_SECRET=test-secret-key-for-ci
-          JWT_ALGORITHM=HS256
-          JWT_EXPIRE_MINUTES=60
-          EOF
-
-      - name: Start FastAPI backend
-        run: |
-          cd backend
-          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          echo "Waiting for backend to start..."
-          for i in {1..30}; do
-            if curl -s http://localhost:8000/health > /dev/null; then
-              echo "Backend is up!"
-              break
-            fi
-            echo "Waiting for backend... ($i/30)"
-            sleep 1
-          done
-          curl http://localhost:8000/health || exit 1
-
       - name: Install frontend dependencies
         working-directory: ./frontend
         run: npm ci
@@ -85,6 +59,9 @@ jobs:
         env:
           BASE_URL: http://localhost:3000
           API_URL: http://localhost:8000
+          JWT_SECRET: test-secret-key-for-ci
+          JWT_ALGORITHM: HS256
+          JWT_EXPIRE_MINUTES: 60
 
       - name: Upload test results
         if: failure()

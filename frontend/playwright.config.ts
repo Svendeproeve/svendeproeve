@@ -7,8 +7,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
-  globalSetup: process.env.CI ? undefined : require.resolve('./tests/global-setup'),
-  globalTeardown: process.env.CI ? undefined : require.resolve('./tests/global-teardown'),
+  globalSetup: require.resolve('./tests/global-setup'),
+  globalTeardown: require.resolve('./tests/global-teardown'),
 
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
