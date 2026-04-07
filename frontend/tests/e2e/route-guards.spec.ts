@@ -85,6 +85,6 @@ test.describe("Route Guards", () => {
   }) => {
     await page.goto("/onboarding");
     await expect(page).toHaveURL("/onboarding");
-    await expect(page.getByText("Your Organizations")).toBeVisible();
+    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
   });
 });

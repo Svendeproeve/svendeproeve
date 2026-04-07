@@ -38,9 +38,12 @@ test.describe("Authentication Flow", () => {
     await expect(page.getByTestId("onboarding-welcome-title")).toBeVisible();
     await expect(page.getByTestId("onboarding-subtitle")).toBeVisible();
 
+    await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-org-name-input").fill(testUser.orgName);
     await page.getByTestId("onboarding-create-org-button").click();
 
+    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
+    await page.getByText(testUser.orgName).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 15000 });
     await expect(page.getByTestId("dashboard-greeting")).toBeVisible();
     await expect(page.getByTestId("dashboard-weekly-stats-title")).toBeVisible();
@@ -81,9 +84,12 @@ test.describe("Login Flow", () => {
 
     await expect(page).toHaveURL("/onboarding", { timeout: 10000 });
 
+    await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-org-name-input").fill(testUser.orgName);
     await page.getByTestId("onboarding-create-org-button").click();
 
+    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
+    await page.getByText(testUser.orgName).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 10000 });
 
     await page.evaluate(() => {
@@ -129,9 +135,12 @@ test.describe("Route Guards", () => {
 
     await expect(page).toHaveURL("/onboarding", { timeout: 10000 });
 
+    await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-org-name-input").fill(testUser.orgName);
     await page.getByTestId("onboarding-create-org-button").click();
 
+    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
+    await page.getByText(testUser.orgName).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 10000 });
   });
 
@@ -211,15 +220,18 @@ test.describe("Onboarding Flow", () => {
   });
 
   test("should create organization successfully", async ({ page }) => {
+    await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-org-name-input").fill(testUser.orgName);
     await page.getByTestId("onboarding-create-org-button").click();
 
-    await expect(page).toHaveURL("/dashboard", { timeout: 10000 });
+    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(testUser.orgName)).toBeVisible();
   });
 
   test("should show validation error when organization name is too short", async ({
     page,
   }) => {
+    await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-org-name-input").fill("A");
     await page.getByTestId("onboarding-create-org-button").click();
 
@@ -229,6 +241,7 @@ test.describe("Onboarding Flow", () => {
   test("should show error when organization name is empty", async ({
     page,
   }) => {
+    await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-create-org-button").click();
 
     await expect(page.getByTestId("onboarding-error")).toBeVisible();
