@@ -23,6 +23,13 @@ Inbox management:
 - `PUT /organizations/{org_id}/inboxes/members/{member_user_id}/access`
 - `GET /organizations/{org_id}/inboxes/members/{member_user_id}/access`
 
+Mail account (IMAP connection) management:
+
+- `POST /organizations/{org_id}/mail-accounts`
+- `GET /organizations/{org_id}/mail-accounts`
+- `PUT /organizations/{org_id}/mail-accounts/{mail_account_id}`
+- `DELETE /organizations/{org_id}/mail-accounts/{mail_account_id}`
+
 Filter management:
 
 - `POST /organizations/{org_id}/filters`
