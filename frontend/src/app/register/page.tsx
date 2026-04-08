@@ -70,7 +70,7 @@ export default function RegisterPage() {
         data-testid="register-title"
         sx={{
           fontSize: '4rem',
-          fontWeight: 400,
+          
           mb: 8,
           color: 'white',
         }}

@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, Alert, CircularProgress, Card, CardContent, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrganizations } from '@/hooks/useOrganizations';
+import { useOrganizations, setStoredOrgId, getStoredOrgId } from '@/hooks/useOrganizations';
 import { organizationApi } from '@/lib/api';
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromLogin = searchParams.get('from') === 'login';
   const { token, isAuthenticated } = useAuth();
   const { organizations, isLoading: isLoadingOrgs, mutate } = useOrganizations();
 
@@ -20,8 +22,17 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
+    } else if (fromLogin && !isLoadingOrgs && organizations.length > 0) {
+      const storedOrgId = getStoredOrgId();
+      const hasValidStoredOrg = organizations.some(o => o.id === storedOrgId);
+      if (hasValidStoredOrg) {
+        router.push('/dashboard');
+      } else if (organizations.length === 1) {
+        setStoredOrgId(organizations[0].id);
+        router.push('/dashboard');
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, fromLogin, isLoadingOrgs, organizations, router]);
 
   const handleCreateOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +67,8 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleSelectOrganization = () => {
+  const handleSelectOrganization = (orgId: string) => {
+    setStoredOrgId(orgId);
     router.push('/dashboard');
   };
 
@@ -99,7 +111,7 @@ export default function OnboardingPage() {
         data-testid="onboarding-welcome-title"
         sx={{
           fontSize: '4rem',
-          fontWeight: 400,
+          
           mb: 2,
           color: 'white',
         }}
@@ -144,7 +156,7 @@ export default function OnboardingPage() {
                     {index > 0 && <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />}
                     <ListItem disablePadding>
                       <ListItemButton
-                        onClick={handleSelectOrganization}
+                        onClick={() => handleSelectOrganization(org.id)}
                         data-testid={`select-org-${org.id}`}
                         sx={{
                           '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
