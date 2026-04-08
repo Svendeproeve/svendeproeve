@@ -52,7 +52,7 @@ class InviteMemberRequest(BaseModel):
     role: Literal["admin", "member"] = "member"
 
 
-class InboxCreateRequest(BaseModel):
+class MailAccountCreateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     imap_host: str = Field(min_length=3, max_length=255)
     imap_port: int = Field(ge=1, le=65535)
@@ -61,7 +61,7 @@ class InboxCreateRequest(BaseModel):
     use_ssl: bool = True
 
 
-class InboxUpdateRequest(BaseModel):
+class MailAccountUpdateRequest(BaseModel):
     name: Optional[str] = Field(default=None, min_length=2, max_length=120)
     imap_host: Optional[str] = Field(default=None, min_length=3, max_length=255)
     imap_port: Optional[int] = Field(default=None, ge=1, le=65535)
@@ -70,7 +70,7 @@ class InboxUpdateRequest(BaseModel):
     use_ssl: Optional[bool] = None
 
 
-class InboxOut(BaseModel):
+class MailAccountOut(BaseModel):
     id: str
     org_id: str
     name: str
@@ -78,6 +78,43 @@ class InboxOut(BaseModel):
     imap_port: int
     imap_username: str
     use_ssl: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class MailAccountTestRequest(BaseModel):
+    imap_host: str = Field(min_length=3, max_length=255)
+    imap_port: int = Field(ge=1, le=65535)
+    imap_username: str = Field(min_length=1, max_length=255)
+    imap_password: str = Field(min_length=1, max_length=255)
+    use_ssl: bool = True
+
+
+class InboxCreateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=500)
+    mail_account_ids: Optional[list[str]] = Field(
+        default=None,
+        description="Optional. If set, only poll/categorize emails from these mail accounts. If omitted, applies to all mail accounts in the org.",
+    )
+
+
+class InboxUpdateRequest(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=2, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=500)
+    mail_account_ids: Optional[list[str]] = Field(
+        default=None,
+        description="Optional. Replace linked mail accounts. Set to [] to apply to all mail accounts.",
+    )
+
+
+class InboxOut(BaseModel):
+    id: str
+    org_id: str
+    name: str
+    description: Optional[str] = None
+    mail_account_ids: Optional[list[str]] = None
+    is_system: bool = False
     created_at: datetime
     updated_at: datetime
 

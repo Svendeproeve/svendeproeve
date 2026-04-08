@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.db import memberships_collection, organizations_collection, users_collection
+from app.db import inboxes_collection, memberships_collection, organizations_collection, users_collection
 from app.dependencies import get_current_user, require_org_admin, require_org_membership
 from app.schemas import (
     InviteMemberRequest,
@@ -34,6 +34,18 @@ def create_organization(
             "user_id": str(current_user["_id"]),
             "role": "owner",
             "created_at": now,
+        }
+    )
+    # System fallback category: uncategorised
+    inboxes_collection.insert_one(
+        {
+            "org_id": org_id,
+            "name": "Uncategorised",
+            "description": "Fallback category for emails that do not match any category.",
+            "mail_account_ids": None,  # applies to all mail accounts
+            "is_system": True,
+            "created_at": now,
+            "updated_at": now,
         }
     )
     return OrganizationOut(id=org_id, **org_doc)
