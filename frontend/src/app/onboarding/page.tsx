@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Box, TextField, Button, Typography, Alert, CircularProgress } from '@mui/material';
+import { Box, TextField, Button, Typography, Alert, CircularProgress, Card, CardContent, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
@@ -10,21 +10,20 @@ import { organizationApi } from '@/lib/api';
 export default function OnboardingPage() {
   const router = useRouter();
   const { token, isAuthenticated } = useAuth();
-  const { hasOrganizations, isLoading: isLoadingOrgs, mutate } = useOrganizations();
+  const { organizations, isLoading: isLoadingOrgs, mutate } = useOrganizations();
 
   const [orgName, setOrgName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
-    } else if (!isLoadingOrgs && hasOrganizations) {
-      router.push('/dashboard');
     }
-  }, [isAuthenticated, hasOrganizations, isLoadingOrgs, router]);
+  }, [isAuthenticated, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -48,12 +47,17 @@ export default function OnboardingPage() {
     try {
       await organizationApi.create({ name: orgName }, token);
       await mutate();
-      router.push('/dashboard');
+      setOrgName('');
+      setShowCreateForm(false);
     } catch (err: any) {
       setError(err.message || 'Failed to create organization');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSelectOrganization = () => {
+    router.push('/dashboard');
   };
 
   if (isLoadingOrgs) {
@@ -72,9 +76,11 @@ export default function OnboardingPage() {
     );
   }
 
-  if (!isAuthenticated || hasOrganizations) {
+  if (!isAuthenticated) {
     return null;
   }
+
+  const hasOrganizations = organizations.length > 0;
 
   return (
     <Box
@@ -110,15 +116,13 @@ export default function OnboardingPage() {
           textAlign: 'center',
         }}
       >
-        Let's create your first organization
+        {hasOrganizations ? 'Select or create an organization' : 'Get started by creating an organization'}
       </Typography>
 
       <Box
-        component="form"
-        onSubmit={handleSubmit}
         sx={{
           width: '100%',
-          maxWidth: 400,
+          maxWidth: 600,
         }}
       >
         {error && (
@@ -127,39 +131,129 @@ export default function OnboardingPage() {
           </Alert>
         )}
 
-        <Typography
-          variant="body1"
-          sx={{ mb: 1, color: 'white', fontWeight: 500 }}
-        >
-          Organization Name
-        </Typography>
-        <TextField
-          fullWidth
-          placeholder="My Company"
-          variant="outlined"
-          value={orgName}
-          onChange={(e) => setOrgName(e.target.value)}
-          disabled={isLoading}
-          autoFocus
-          inputProps={{ 'data-testid': 'onboarding-org-name-input' }}
-          sx={{ mb: 3 }}
-        />
+        {/* Organization List */}
+        {hasOrganizations && (
+          <Card sx={{ mb: 3, bgcolor: '#2c2c2c' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
+                Your Organizations
+              </Typography>
+              <List>
+                {organizations.map((org, index) => (
+                  <Box key={org.id}>
+                    {index > 0 && <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />}
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        onClick={handleSelectOrganization}
+                        data-testid={`select-org-${org.id}`}
+                        sx={{
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+                        }}
+                      >
+                        <ListItemText
+                          primary={org.name}
+                          secondary={`Created ${new Date(org.created_at).toLocaleDateString()}`}
+                          sx={{
+                            '& .MuiListItemText-primary': { color: 'white' },
+                            '& .MuiListItemText-secondary': { color: 'text.secondary' },
+                          }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  </Box>
+                ))}
+              </List>
+            </CardContent>
+          </Card>
+        )}
 
-        <Button
-          fullWidth
-          type="submit"
-          variant="contained"
-          disabled={isLoading}
-          data-testid="onboarding-create-org-button"
-          sx={{
-            py: 1.5,
-            fontSize: '1.1rem',
-            fontWeight: 600,
-            textTransform: 'none',
-          }}
-        >
-          {isLoading ? 'Creating...' : 'Create Organization'}
-        </Button>
+        {/* No Organizations Message */}
+        {!hasOrganizations && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            Either create an organization or join by invite from organization owner.
+          </Alert>
+        )}
+
+        {/* Create Organization Section */}
+        {!showCreateForm ? (
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => setShowCreateForm(true)}
+            data-testid="show-create-org-button"
+            sx={{
+              py: 1.5,
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              textTransform: 'none',
+            }}
+          >
+            Create New Organization
+          </Button>
+        ) : (
+          <Card sx={{ bgcolor: '#2c2c2c' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
+                Create Organization
+              </Typography>
+              <Box component="form" onSubmit={handleCreateOrganization}>
+                <Typography
+                  variant="body1"
+                  sx={{ mb: 1, color: 'white', fontWeight: 500 }}
+                >
+                  Organization Name
+                </Typography>
+                <TextField
+                  fullWidth
+                  placeholder="My Company"
+                  variant="outlined"
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                  disabled={isLoading}
+                  autoFocus
+                  inputProps={{ 'data-testid': 'onboarding-org-name-input' }}
+                  sx={{ mb: 2 }}
+                />
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    fullWidth
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    data-testid="onboarding-create-org-button"
+                    sx={{
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                    }}
+                  >
+                    {isLoading ? 'Creating...' : 'Create'}
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setOrgName('');
+                      setError('');
+                    }}
+                    disabled={isLoading}
+                    sx={{
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        )}
       </Box>
     </Box>
   );

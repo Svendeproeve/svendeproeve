@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 
 export interface TestUser {
+  fullName: string;
   email: string;
   password: string;
   orgName?: string;
@@ -8,6 +9,7 @@ export interface TestUser {
 
 export async function signupUser(page: Page, user: TestUser): Promise<void> {
   await page.goto('/register');
+  await page.getByPlaceholder('John Doe').fill(user.fullName);
   await page.getByPlaceholder('you@example.com').fill(user.email);
   await page.getByPlaceholder('••••••••••••••••').first().fill(user.password);
   await page.getByPlaceholder('••••••••••••••••').last().fill(user.password);
@@ -40,6 +42,7 @@ export async function logout(page: Page): Promise<void> {
 
 export function generateTestUser(prefix: string = 'test'): TestUser {
   return {
+    fullName: `Test User ${Date.now()}`,
     email: `${prefix}-${Date.now()}@example.com`,
     password: 'testpassword123',
     orgName: `Test Org ${Date.now()}`,

@@ -9,6 +9,7 @@ test.describe("Route Guards", () => {
     authenticatedEmail = `guard-test-${Date.now()}@example.com`;
 
     await page.goto("/register");
+    await page.getByTestId("register-fullname-input").fill(testUser.fullName);
     await page.getByTestId("register-email-input").fill(authenticatedEmail);
     await page.getByTestId("register-password-input").fill(testUser.password);
     await page.getByTestId("register-confirm-password-input").fill(testUser.password);
@@ -16,9 +17,13 @@ test.describe("Route Guards", () => {
 
     await expect(page).toHaveURL("/onboarding", { timeout: 10000 });
 
+    await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-org-name-input").fill(testUser.orgName!);
     await page.getByTestId("onboarding-create-org-button").click();
 
+    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
+
+    await page.getByText(testUser.orgName!).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 10000 });
   });
 
@@ -53,6 +58,7 @@ test.describe("Route Guards", () => {
 
     const newEmail = `no-org-${Date.now()}@example.com`;
     await page.goto("/register");
+    await page.getByTestId("register-fullname-input").fill(testUser.fullName);
     await page.getByTestId("register-email-input").fill(newEmail);
     await page.getByTestId("register-password-input").fill(testUser.password);
     await page.getByTestId("register-confirm-password-input").fill(testUser.password);
@@ -74,10 +80,11 @@ test.describe("Route Guards", () => {
     await expect(page).toHaveURL("/login", { timeout: 10000 });
   });
 
-  test("should redirect from onboarding to dashboard if organization exists", async ({
+  test("should allow accessing onboarding page even with existing organization", async ({
     page,
   }) => {
     await page.goto("/onboarding");
-    await expect(page).toHaveURL("/dashboard", { timeout: 10000 });
+    await expect(page).toHaveURL("/onboarding");
+    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
   });
 });

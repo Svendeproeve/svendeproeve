@@ -16,6 +16,7 @@ import { IoSpeedometer, IoMail, IoSettings, IoExtensionPuzzle, IoPeople, IoLogOu
 import { IconType } from 'react-icons';
 import Link from 'next/link';
 import { inboxes } from '@/lib/inboxes';
+import { useAuth } from '@/hooks/useAuth';
 
 const drawerWidth = 220;
 
@@ -30,6 +31,7 @@ interface MenuItem {
   icon: IconType;
   href?: string;
   submenu?: SubMenuItem[];
+  requiresAdmin?: boolean;
 }
 
 const menuItems: MenuItem[] = [
@@ -61,16 +63,27 @@ const menuItems: MenuItem[] = [
     label: 'User Management',
     icon: IoPeople,
     href: '/user-management',
+    requiresAdmin: true,
   },
 ];
 
 interface DashboardLayoutProps {
   children: ReactNode;
   userName?: string;
+  userRole?: 'owner' | 'admin' | 'member';
 }
 
-export default function DashboardLayout({ children, userName = 'John Doe' }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, userName, userRole }: DashboardLayoutProps) {
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({});
+  const { signout } = useAuth();
+
+  // Filter menu items based on user role
+  const visibleMenuItems = menuItems.filter(item => {
+    if (item.requiresAdmin && userRole === 'member') {
+      return false;
+    }
+    return true;
+  });
 
   const toggleMenu = (label: string) => {
     setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
@@ -98,7 +111,7 @@ export default function DashboardLayout({ children, userName = 'John Doe' }: Das
         </Box>
 
         <List sx={{ px: 1 }}>
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const hasSubmenu = !!item.submenu;
             const isOpen = openMenus[item.label] || false;
@@ -171,10 +184,17 @@ export default function DashboardLayout({ children, userName = 'John Doe' }: Das
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              (Admin) {userName}
-            </Typography>
-            <IconButton size="small" sx={{ color: 'white' }}>
+            {userName && (
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {userName}
+              </Typography>
+            )}
+            <IconButton
+              size="small"
+              sx={{ color: 'white' }}
+              onClick={signout}
+              data-testid="logout-button"
+            >
               <IoLogOut size={20} />
             </IconButton>
           </Box>

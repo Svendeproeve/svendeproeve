@@ -14,6 +14,10 @@ import {
 import DashboardLayout from '@/components/DashboardLayout';
 import { getInboxById } from '@/lib/inboxes';
 import { notFound } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useOrganizations } from '@/hooks/useOrganizations';
+import { organizationApi, Member } from '@/lib/api';
+import useSWR from 'swr';
 
 const threadsData = [
   {
@@ -67,14 +71,29 @@ const threadsData = [
 ];
 
 export default function InboxPage({ params }: { params: { id: string } }) {
+  const { user, token } = useAuth();
+  const { organizations } = useOrganizations();
   const inbox = getInboxById(params.id);
+
+  const currentOrg = organizations[0];
+
+  const { data: members } = useSWR<Member[]>(
+    currentOrg && token ? ['members', currentOrg.id, token] : null,
+    ([_, orgId, token]) => organizationApi.listMembers(orgId, token),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  const currentUserRole = members?.find(m => m.user_id === user?.id)?.role;
 
   if (!inbox) {
     notFound();
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
       <Typography variant="h4" sx={{ mb: 4, color: 'white', fontWeight: 400 }}>
         {inbox.name} Threads
       </Typography>

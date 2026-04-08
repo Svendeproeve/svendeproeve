@@ -21,6 +21,8 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { getInboxById } from '@/lib/inboxes';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
+import { organizationApi, Member } from '@/lib/api';
+import useSWR from 'swr';
 
 const statsData = [
   { label: 'Active Threads', value: '67' },
@@ -77,8 +79,21 @@ const threadsData = [
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
-  const { hasOrganizations, isLoading } = useOrganizations();
+  const { isAuthenticated, user, token } = useAuth();
+  const { organizations, hasOrganizations, isLoading } = useOrganizations();
+
+  const currentOrg = organizations[0];
+
+  const { data: members } = useSWR<Member[]>(
+    currentOrg && token ? ['members', currentOrg.id, token] : null,
+    ([_, orgId, token]) => organizationApi.listMembers(orgId, token),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  const currentUserRole = members?.find(m => m.user_id === user?.id)?.role;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -109,9 +124,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
       <Typography variant="h4" data-testid="dashboard-greeting" sx={{ mb: 4, color: 'white', fontWeight: 400 }}>
-        Goodmorning, John Doe!
+        Goodmorning, {user?.full_name || 'User'}!
       </Typography>
 
       <Typography variant="h6" data-testid="dashboard-weekly-stats-title" sx={{ mb: 3, color: 'white', textAlign: 'center' }}>

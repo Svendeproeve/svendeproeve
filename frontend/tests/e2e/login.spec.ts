@@ -10,6 +10,7 @@ test.describe("Login Flow", () => {
     userEmail = signupEmail;
 
     await page.goto("/register");
+    await page.getByTestId("register-fullname-input").fill(testUser.fullName);
     await page.getByTestId("register-email-input").fill(signupEmail);
     await page.getByTestId("register-password-input").fill(testUser.password);
     await page.getByTestId("register-confirm-password-input").fill(testUser.password);
@@ -17,9 +18,12 @@ test.describe("Login Flow", () => {
 
     await expect(page).toHaveURL("/onboarding", { timeout: 10000 });
 
+    await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-org-name-input").fill(testUser.orgName!);
     await page.getByTestId("onboarding-create-org-button").click();
 
+    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
+    await page.getByText(testUser.orgName!).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 10000 });
 
     await logout(page);

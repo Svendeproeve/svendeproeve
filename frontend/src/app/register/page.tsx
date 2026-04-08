@@ -10,6 +10,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const { signup, isAuthenticated } = useAuth();
 
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,7 +27,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    if (!email || !password || !confirmPassword) {
+    if (!fullName || !email || !password || !confirmPassword) {
       setError('All fields are required');
       return;
     }
@@ -44,7 +45,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await signup({ email, password });
+      await signup({ full_name: fullName, email, password });
       router.push('/onboarding');
     } catch (err: any) {
       setError(err.message || 'Signup failed. Please try again.');
@@ -90,6 +91,24 @@ export default function RegisterPage() {
             {error}
           </Alert>
         )}
+
+        <Typography
+          variant="body1"
+          sx={{ mb: 1, color: 'white', fontWeight: 500 }}
+        >
+          Full Name
+        </Typography>
+        <TextField
+          fullWidth
+          type="text"
+          placeholder="John Doe"
+          variant="outlined"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          disabled={isLoading}
+          inputProps={{ 'data-testid': 'register-fullname-input' }}
+          sx={{ mb: 2 }}
+        />
 
         <Typography
           variant="body1"
