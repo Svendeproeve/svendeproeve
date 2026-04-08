@@ -15,6 +15,9 @@ memberships_collection = db["memberships"]
 memberships_collection.create_index([("org_id", 1), ("user_id", 1)], unique=True)
 memberships_collection.create_index("user_id")
 
+mail_accounts_collection = db["mail_accounts"]
+mail_accounts_collection.create_index("org_id")
+
 inboxes_collection = db["inboxes"]
 inboxes_collection.create_index("org_id")
 

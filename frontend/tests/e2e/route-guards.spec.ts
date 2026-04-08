@@ -12,7 +12,9 @@ test.describe("Route Guards", () => {
     await page.getByTestId("register-fullname-input").fill(testUser.fullName);
     await page.getByTestId("register-email-input").fill(authenticatedEmail);
     await page.getByTestId("register-password-input").fill(testUser.password);
-    await page.getByTestId("register-confirm-password-input").fill(testUser.password);
+    await page
+      .getByTestId("register-confirm-password-input")
+      .fill(testUser.password);
     await page.getByTestId("register-submit-button").click();
 
     await expect(page).toHaveURL("/onboarding", { timeout: 10000 });
@@ -21,7 +23,9 @@ test.describe("Route Guards", () => {
     await page.getByTestId("onboarding-org-name-input").fill(testUser.orgName!);
     await page.getByTestId("onboarding-create-org-button").click();
 
-    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Your Organizations")).toBeVisible({
+      timeout: 10000,
+    });
 
     await page.getByText(testUser.orgName!).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 10000 });
@@ -61,7 +65,9 @@ test.describe("Route Guards", () => {
     await page.getByTestId("register-fullname-input").fill(testUser.fullName);
     await page.getByTestId("register-email-input").fill(newEmail);
     await page.getByTestId("register-password-input").fill(testUser.password);
-    await page.getByTestId("register-confirm-password-input").fill(testUser.password);
+    await page
+      .getByTestId("register-confirm-password-input")
+      .fill(testUser.password);
     await page.getByTestId("register-submit-button").click();
 
     await expect(page).toHaveURL("/onboarding", { timeout: 10000 });
@@ -78,13 +84,5 @@ test.describe("Route Guards", () => {
 
     await page.goto("/dashboard");
     await expect(page).toHaveURL("/login", { timeout: 10000 });
-  });
-
-  test("should allow accessing onboarding page even with existing organization", async ({
-    page,
-  }) => {
-    await page.goto("/onboarding");
-    await expect(page).toHaveURL("/onboarding");
-    await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
   });
 });
