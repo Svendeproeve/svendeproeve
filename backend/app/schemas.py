@@ -90,7 +90,7 @@ class MailAccountTestRequest(BaseModel):
     use_ssl: bool = True
 
 
-class InboxCreateRequest(BaseModel):
+class CategoryCreateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     description: Optional[str] = Field(default=None, max_length=500)
     mail_account_ids: Optional[list[str]] = Field(
@@ -99,7 +99,7 @@ class InboxCreateRequest(BaseModel):
     )
 
 
-class InboxUpdateRequest(BaseModel):
+class CategoryUpdateRequest(BaseModel):
     name: Optional[str] = Field(default=None, min_length=2, max_length=120)
     description: Optional[str] = Field(default=None, max_length=500)
     mail_account_ids: Optional[list[str]] = Field(
@@ -108,7 +108,7 @@ class InboxUpdateRequest(BaseModel):
     )
 
 
-class InboxOut(BaseModel):
+class CategoryOut(BaseModel):
     id: str
     org_id: str
     name: str
@@ -126,7 +126,7 @@ class FilterCreateRequest(BaseModel):
         min_length=2,
         description="Human-readable rule/query that AI/classifier can evaluate.",
     )
-    target_inbox_id: str
+    target_category_id: str
     is_active: bool = True
 
 
@@ -134,7 +134,7 @@ class FilterUpdateRequest(BaseModel):
     name: Optional[str] = Field(default=None, min_length=2, max_length=120)
     description: Optional[str] = Field(default=None, max_length=500)
     match_query: Optional[str] = Field(default=None, min_length=2)
-    target_inbox_id: Optional[str] = None
+    target_category_id: Optional[str] = None
     is_active: Optional[bool] = None
 
 
@@ -144,11 +144,11 @@ class FilterOut(BaseModel):
     name: str
     description: Optional[str] = None
     match_query: str
-    target_inbox_id: str
+    target_category_id: str
     is_active: bool
     created_at: datetime
     updated_at: datetime
 
 
-class MemberInboxAccessUpdateRequest(BaseModel):
-    inbox_ids: list[str] = Field(default_factory=list)
+class MemberCategoryAccessUpdateRequest(BaseModel):
+    category_ids: list[str] = Field(default_factory=list)

@@ -21,18 +21,29 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
 } from '@mui/material';
+import { IoKey } from 'react-icons/io5';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
-import { organizationApi, Member, InviteMemberData } from '@/lib/api';
+import { useInboxes } from '@/hooks/useInboxes';
+import { organizationApi, Member, InviteMemberData, inboxApi } from '@/lib/api';
 import useSWR from 'swr';
 
 export default function UserManagementPage() {
   const router = useRouter();
   const { isAuthenticated, user, token } = useAuth();
-  const { organizations, isLoading: isLoadingOrgs } = useOrganizations();
+  const { organizations, currentOrg, isLoading: isLoadingOrgs } = useOrganizations();
+  const { inboxes } = useInboxes();
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'member'>('member');
@@ -40,31 +51,32 @@ export default function UserManagementPage() {
   const [success, setSuccess] = useState('');
   const [isInviting, setIsInviting] = useState(false);
 
-  // Use first organization for now (could be improved with org selection)
-  const currentOrg = organizations[0];
+  const [accessMember, setAccessMember] = useState<Member | null>(null);
+  const [selectedInboxIds, setSelectedInboxIds] = useState<string[]>([]);
+  const [isLoadingAccess, setIsLoadingAccess] = useState(false);
+  const [isSavingAccess, setIsSavingAccess] = useState(false);
+  const [accessError, setAccessError] = useState('');
 
   const { data: members, mutate, isLoading: isLoadingMembers } = useSWR<Member[]>(
     currentOrg && token ? ['members', currentOrg.id, token] : null,
     ([_, orgId, token]) => organizationApi.listMembers(orgId, token),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-    }
+    { revalidateOnFocus: false, revalidateOnReconnect: true }
   );
 
-  // Get current user's role in the organization
   const currentUserRole = members?.find(m => m.user_id === user?.id)?.role;
 
+  const { isLoading: isLoadingAuth } = useAuth();
+
   useEffect(() => {
+    if (isLoadingAuth) return;
     if (!isAuthenticated) {
       router.push('/login');
     } else if (!isLoadingOrgs && organizations.length === 0) {
       router.push('/onboarding');
     } else if (members && currentUserRole === 'member') {
-      // Redirect members away from user management
       router.push('/dashboard');
     }
-  }, [isAuthenticated, organizations, isLoadingOrgs, members, currentUserRole, router]);
+  }, [isAuthenticated, isLoadingAuth, organizations, isLoadingOrgs, members, currentUserRole, router]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,19 +87,14 @@ export default function UserManagementPage() {
       setError('Email is required');
       return;
     }
-
     if (!currentOrg || !token) {
       setError('No organization selected');
       return;
     }
 
     setIsInviting(true);
-
     try {
-      const data: InviteMemberData = {
-        email: email.toLowerCase(),
-        role,
-      };
+      const data: InviteMemberData = { email: email.toLowerCase(), role };
       await organizationApi.inviteMember(currentOrg.id, data, token);
       await mutate();
       setEmail('');
@@ -100,17 +107,45 @@ export default function UserManagementPage() {
     }
   };
 
+  const openAccessDialog = async (member: Member) => {
+    if (!currentOrg || !token) return;
+    setAccessMember(member);
+    setAccessError('');
+    setIsLoadingAccess(true);
+    try {
+      const ids = await inboxApi.getMemberAccess(currentOrg.id, member.user_id, token);
+      setSelectedInboxIds(ids);
+    } catch {
+      setSelectedInboxIds([]);
+    } finally {
+      setIsLoadingAccess(false);
+    }
+  };
+
+  const toggleInbox = (inboxId: string) => {
+    setSelectedInboxIds(prev =>
+      prev.includes(inboxId) ? prev.filter(id => id !== inboxId) : [...prev, inboxId]
+    );
+  };
+
+  const handleSaveAccess = async () => {
+    if (!accessMember || !currentOrg || !token) return;
+    setIsSavingAccess(true);
+    setAccessError('');
+    try {
+      await inboxApi.setMemberAccess(currentOrg.id, accessMember.user_id, selectedInboxIds, token);
+      setAccessMember(null);
+    } catch (err: any) {
+      setAccessError(err.message || 'Failed to update access');
+    } finally {
+      setIsSavingAccess(false);
+    }
+  };
+
   if (isLoadingOrgs || isLoadingMembers) {
     return (
       <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '50vh',
-          }}
-        >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
           <CircularProgress />
         </Box>
       </DashboardLayout>
@@ -123,20 +158,16 @@ export default function UserManagementPage() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'owner':
-        return '#f44336';
-      case 'admin':
-        return '#ff9800';
-      case 'member':
-        return '#2196f3';
-      default:
-        return '#666666';
+      case 'owner': return '#f44336';
+      case 'admin': return '#ff9800';
+      case 'member': return '#2196f3';
+      default: return '#666666';
     }
   };
 
   return (
     <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
-      <Typography variant="h4" sx={{ mb: 4, color: 'white', fontWeight: 400 }}>
+      <Typography variant="h4" sx={{ mb: 4, color: 'white' }}>
         User Management
       </Typography>
 
@@ -147,17 +178,8 @@ export default function UserManagementPage() {
             Invite Member
           </Typography>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} data-testid="invite-error">
-              {error}
-            </Alert>
-          )}
-
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }} data-testid="invite-success">
-              {success}
-            </Alert>
-          )}
+          {error && <Alert severity="error" sx={{ mb: 2 }} data-testid="invite-error">{error}</Alert>}
+          {success && <Alert severity="success" sx={{ mb: 2 }} data-testid="invite-success">{success}</Alert>}
 
           <Box component="form" onSubmit={handleInvite}>
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -171,7 +193,6 @@ export default function UserManagementPage() {
                 disabled={isInviting}
                 inputProps={{ 'data-testid': 'invite-email-input' }}
               />
-
               <FormControl sx={{ minWidth: 150 }}>
                 <InputLabel>Role</InputLabel>
                 <Select
@@ -186,19 +207,12 @@ export default function UserManagementPage() {
                 </Select>
               </FormControl>
             </Box>
-
             <Button
               type="submit"
               variant="contained"
               disabled={isInviting}
               data-testid="invite-submit-button"
-              sx={{
-                px: 4,
-                py: 1.5,
-                fontSize: '1rem',
-                fontWeight: 600,
-                textTransform: 'none',
-              }}
+              sx={{ px: 4, py: 1.5, fontSize: '1rem', fontWeight: 600, textTransform: 'none' }}
             >
               {isInviting ? 'Inviting...' : 'Invite'}
             </Button>
@@ -207,7 +221,7 @@ export default function UserManagementPage() {
       </Card>
 
       {/* Members List */}
-      <Typography variant="h6" sx={{ mb: 2, color: 'white', fontWeight: 400 }}>
+      <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
         Current Members
       </Typography>
 
@@ -219,34 +233,39 @@ export default function UserManagementPage() {
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Email</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Role</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Joined</TableCell>
+              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Inbox Access</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {members && members.length > 0 ? (
               members.map((member) => (
                 <TableRow key={member.user_id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
-                  <TableCell sx={{ color: 'white' }}>
-                    {member.user_full_name || 'N/A'}
-                  </TableCell>
+                  <TableCell sx={{ color: 'white' }}>{member.user_full_name || 'N/A'}</TableCell>
                   <TableCell sx={{ color: 'white' }}>{member.user_email}</TableCell>
                   <TableCell>
                     <Chip
                       label={member.role.toUpperCase()}
-                      sx={{
-                        bgcolor: getRoleColor(member.role),
-                        color: 'white',
-                        fontWeight: 600,
-                      }}
+                      sx={{ bgcolor: getRoleColor(member.role), color: 'white', fontWeight: 600 }}
                     />
                   </TableCell>
                   <TableCell sx={{ color: 'white' }}>
                     {new Date(member.created_at).toLocaleDateString()}
                   </TableCell>
+                  <TableCell>
+                    <IconButton
+                      size="small"
+                      sx={{ color: 'text.secondary' }}
+                      onClick={() => openAccessDialog(member)}
+                      title="Manage inbox access"
+                    >
+                      <IoKey size={18} />
+                    </IconButton>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={5} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
                   No members found
                 </TableCell>
               </TableRow>
@@ -254,6 +273,51 @@ export default function UserManagementPage() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Inbox Access Dialog */}
+      <Dialog open={!!accessMember} onClose={() => setAccessMember(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>
+          Inbox Access — {accessMember?.user_full_name || accessMember?.user_email}
+        </DialogTitle>
+        <DialogContent>
+          {accessError && <Alert severity="error" sx={{ mb: 2 }}>{accessError}</Alert>}
+          {isLoadingAccess ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : inboxes.length === 0 ? (
+            <Typography variant="body2" sx={{ color: 'text.secondary', py: 1 }}>
+              No inboxes available. Create inboxes first.
+            </Typography>
+          ) : (
+            <FormGroup sx={{ mt: 1 }}>
+              {inboxes.map(inbox => (
+                <FormControlLabel
+                  key={inbox.id}
+                  control={
+                    <Checkbox
+                      checked={selectedInboxIds.includes(inbox.id)}
+                      onChange={() => toggleInbox(inbox.id)}
+                      disabled={isSavingAccess}
+                    />
+                  }
+                  label={inbox.name}
+                />
+              ))}
+            </FormGroup>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setAccessMember(null)} disabled={isSavingAccess}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveAccess}
+            disabled={isSavingAccess || isLoadingAccess || inboxes.length === 0}
+          >
+            {isSavingAccess ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </DashboardLayout>
   );
 }

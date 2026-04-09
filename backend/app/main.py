@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.auth import router as auth_router
 from app.routes.filters import router as filters_router
-from app.routes.inboxes import router as inboxes_router
+from app.routes.categories import router as categories_router
 from app.routes.mail_accounts import router as mail_accounts_router
 from app.routes.organizations import router as organizations_router
 
@@ -29,7 +29,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(organizations_router)
 app.include_router(mail_accounts_router)
-app.include_router(inboxes_router)
+app.include_router(categories_router)
 app.include_router(filters_router)
 
 
