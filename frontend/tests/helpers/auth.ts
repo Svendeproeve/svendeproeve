@@ -41,11 +41,12 @@ export async function logout(page: Page): Promise<void> {
 }
 
 export function generateTestUser(prefix: string = 'test'): TestUser {
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   return {
-    fullName: `Test User ${Date.now()}`,
-    email: `${prefix}-${Date.now()}@example.com`,
+    fullName: `Test User ${id}`,
+    email: `${prefix}-${id}@example.com`,
     password: 'testpassword123',
-    orgName: `Test Org ${Date.now()}`,
+    orgName: `Test Org ${id}`,
   };
 }
 

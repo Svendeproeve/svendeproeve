@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.db import inboxes_collection, memberships_collection, organizations_collection, users_collection
+from app.db import categories_collection, memberships_collection, organizations_collection, users_collection
 from app.dependencies import get_current_user, require_org_admin, require_org_membership
 from app.schemas import (
     InviteMemberRequest,
@@ -37,7 +37,7 @@ def create_organization(
         }
     )
     # System fallback category: uncategorised
-    inboxes_collection.insert_one(
+    categories_collection.insert_one(
         {
             "org_id": org_id,
             "name": "Uncategorised",
