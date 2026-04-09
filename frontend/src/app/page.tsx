@@ -56,7 +56,7 @@ export default function Home() {
             data-testid="landing-title"
             sx={{
               fontSize: { xs: '3rem', md: '5rem' },
-              fontWeight: 400,
+              
               mb: 3,
               color: 'white',
             }}
@@ -70,7 +70,7 @@ export default function Home() {
             sx={{
               mb: 2,
               color: 'text.secondary',
-              fontWeight: 400,
+              
               maxWidth: 600,
               mx: 'auto',
             }}

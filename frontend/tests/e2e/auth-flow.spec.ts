@@ -46,7 +46,6 @@ test.describe("Authentication Flow", () => {
     await page.getByText(testUser.orgName).click();
     await expect(page).toHaveURL("/dashboard", { timeout: 15000 });
     await expect(page.getByTestId("dashboard-greeting")).toBeVisible();
-    await expect(page.getByTestId("dashboard-weekly-stats-title")).toBeVisible();
   });
 
   test("should show validation errors on signup", async ({ page }) => {

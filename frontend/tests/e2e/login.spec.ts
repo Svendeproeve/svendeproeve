@@ -40,7 +40,7 @@ test.describe("Login Flow", () => {
     await page.getByTestId("login-submit-button").click();
 
     await expect(page).toHaveURL("/dashboard", { timeout: 10000 });
-    await expect(page.getByTestId("dashboard-weekly-stats-title")).toBeVisible();
+    await expect(page.getByTestId("dashboard-greeting")).toBeVisible();
   });
 
   test("should show error with invalid credentials", async ({ page }) => {

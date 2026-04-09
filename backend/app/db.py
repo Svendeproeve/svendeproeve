@@ -18,13 +18,13 @@ memberships_collection.create_index("user_id")
 mail_accounts_collection = db["mail_accounts"]
 mail_accounts_collection.create_index("org_id")
 
-inboxes_collection = db["inboxes"]
-inboxes_collection.create_index("org_id")
+categories_collection = db["categories"]
+categories_collection.create_index("org_id")
 
 filters_collection = db["filters"]
 filters_collection.create_index("org_id")
 
-member_inbox_access_collection = db["member_inbox_access"]
-member_inbox_access_collection.create_index(
-    [("org_id", 1), ("user_id", 1), ("inbox_id", 1)], unique=True
+member_category_access_collection = db["member_category_access"]
+member_category_access_collection.create_index(
+    [("org_id", 1), ("user_id", 1), ("category_id", 1)], unique=True
 )

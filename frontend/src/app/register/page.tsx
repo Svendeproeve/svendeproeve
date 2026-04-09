@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { signup, isAuthenticated } = useAuth();
+  const { signup, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -16,12 +16,13 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [justSignedUp, setJustSignedUp] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!authLoading && isAuthenticated && !justSignedUp) {
       router.push('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, authLoading, justSignedUp, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +46,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
+      setJustSignedUp(true);
       await signup({ full_name: fullName, email, password });
       router.push('/onboarding');
     } catch (err: any) {
@@ -70,7 +72,7 @@ export default function RegisterPage() {
         data-testid="register-title"
         sx={{
           fontSize: '4rem',
-          fontWeight: 400,
+          
           mb: 8,
           color: 'white',
         }}

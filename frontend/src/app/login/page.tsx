@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signin, isAuthenticated } = useAuth();
+  const { signin, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,10 +16,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
+    if (!authLoading && isAuthenticated) {
+      router.push('/onboarding?from=login');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,13 +34,15 @@ export default function LoginPage() {
 
     try {
       await signin({ email, password });
-      router.push('/dashboard');
+      router.push('/onboarding?from=login');
     } catch (err: any) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (authLoading || isAuthenticated) return null;
 
   return (
     <Box
@@ -58,7 +60,7 @@ export default function LoginPage() {
         data-testid="login-title"
         sx={{
           fontSize: '4rem',
-          fontWeight: 400,
+          
           mb: 8,
           color: 'white',
         }}

@@ -6,7 +6,7 @@ test.describe("Route Guards", () => {
   let authenticatedEmail: string;
 
   test.beforeEach(async ({ page }) => {
-    authenticatedEmail = `guard-test-${Date.now()}@example.com`;
+    authenticatedEmail = `guard-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
 
     await page.goto("/register");
     await page.getByTestId("register-fullname-input").fill(testUser.fullName);
