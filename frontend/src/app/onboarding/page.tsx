@@ -2,15 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { Box, TextField, Button, Typography, Alert, Card, CardContent, List, ListItem, ListItemButton, ListItemText, Divider } from '@mui/material';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations, setStoredOrgId, getStoredOrgId } from '@/hooks/useOrganizations';
 import { organizationApi } from '@/lib/api';
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const fromLogin = searchParams.get('from') === 'login';
   const { token, isAuthenticated, isLoading: authLoading } = useAuth();
   const { organizations, isLoading: isLoadingOrgs, mutate } = useOrganizations();
 
@@ -23,17 +21,14 @@ export default function OnboardingPage() {
     if (authLoading) return;
     if (!isAuthenticated) {
       router.push('/login');
-    } else if (fromLogin && !isLoadingOrgs && organizations.length > 0) {
+    } else if (!isLoadingOrgs && organizations.length > 0) {
       const storedOrgId = getStoredOrgId();
       const hasValidStoredOrg = organizations.some(o => o.id === storedOrgId);
       if (hasValidStoredOrg) {
         router.push('/dashboard');
-      } else if (organizations.length === 1) {
-        setStoredOrgId(organizations[0].id);
-        router.push('/dashboard');
       }
     }
-  }, [isAuthenticated, authLoading, fromLogin, isLoadingOrgs, organizations, router]);
+  }, [isAuthenticated, authLoading, isLoadingOrgs, organizations, router]);
 
   const handleCreateOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,9 +71,7 @@ export default function OnboardingPage() {
   if (authLoading || isLoadingOrgs || !isAuthenticated) return null;
 
   const storedOrgId = getStoredOrgId();
-  const willAutoRedirect = fromLogin && organizations.length > 0 && (
-    organizations.some(o => o.id === storedOrgId) || organizations.length === 1
-  );
+  const willAutoRedirect = organizations.length > 0 && organizations.some(o => o.id === storedOrgId);
   if (willAutoRedirect) return null;
 
   const hasOrganizations = organizations.length > 0;
