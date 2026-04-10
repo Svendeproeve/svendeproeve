@@ -29,6 +29,8 @@ Mail account (IMAP connection) management:
 - `GET /organizations/{org_id}/mail-accounts`
 - `PUT /organizations/{org_id}/mail-accounts/{mail_account_id}`
 - `DELETE /organizations/{org_id}/mail-accounts/{mail_account_id}`
+- `POST /organizations/{org_id}/mail-accounts/test` (test IMAP login)
+- `POST /organizations/{org_id}/mail-accounts/test-smtp` (test SMTP login)
 
 Filter management:
 

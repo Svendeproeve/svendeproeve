@@ -42,6 +42,7 @@ def create_organization(
             "org_id": org_id,
             "name": "Uncategorised",
             "description": "Fallback category for emails that do not match any category.",
+            "color": None,
             "mail_account_ids": None,  # applies to all mail accounts
             "is_system": True,
             "created_at": now,
