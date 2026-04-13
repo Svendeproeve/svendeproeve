@@ -108,6 +108,7 @@ export default function RegisterPage() {
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           disabled={isLoading}
+          required
           inputProps={{ 'data-testid': 'register-fullname-input' }}
           sx={{ mb: 2 }}
         />

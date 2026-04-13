@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
 } from '@mui/material';
 import { IoTrash, IoPencil, IoCheckmarkCircle, IoCloseCircle } from 'react-icons/io5';
 import { useRouter } from 'next/navigation';
@@ -39,6 +40,11 @@ const DEFAULT_FORM: MailAccountCreateData = {
   imap_username: '',
   imap_password: '',
   use_ssl: true,
+  smtp_host: '',
+  smtp_port: 465,
+  smtp_username: '',
+  smtp_password: '',
+  smtp_use_ssl: true,
 };
 
 export default function MailAccountManagementPage() {
@@ -66,6 +72,8 @@ export default function MailAccountManagementPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  const [smtpTestResult, setSmtpTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [isSmtpTesting, setIsSmtpTesting] = useState(false);
 
   const [editAccount, setEditAccount] = useState<MailAccount | null>(null);
   const [editForm, setEditForm] = useState<MailAccountUpdateData>({});
@@ -106,6 +114,26 @@ export default function MailAccountManagementPage() {
     }
   };
 
+  const handleSmtpTest = async () => {
+    if (!currentOrg || !token) return;
+    setIsSmtpTesting(true);
+    setSmtpTestResult(null);
+    try {
+      const result = await mailAccountApi.testSmtp(currentOrg.id, {
+        smtp_host: form.smtp_host,
+        smtp_port: form.smtp_port,
+        smtp_username: form.smtp_username,
+        smtp_password: form.smtp_password,
+        smtp_use_ssl: form.smtp_use_ssl,
+      }, token);
+      setSmtpTestResult(result);
+    } catch (err: any) {
+      setSmtpTestResult({ ok: false, error: err.message });
+    } finally {
+      setIsSmtpTesting(false);
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -117,6 +145,7 @@ export default function MailAccountManagementPage() {
       await mutate();
       setForm(DEFAULT_FORM);
       setTestResult(null);
+      setSmtpTestResult(null);
       setSuccess(`Mail account "${form.name}" added`);
     } catch (err: any) {
       setError(err.message || 'Failed to create mail account');
@@ -127,7 +156,17 @@ export default function MailAccountManagementPage() {
 
   const openEdit = (account: MailAccount) => {
     setEditAccount(account);
-    setEditForm({ name: account.name, imap_host: account.imap_host, imap_port: account.imap_port, imap_username: account.imap_username, use_ssl: account.use_ssl });
+    setEditForm({
+      name: account.name,
+      imap_host: account.imap_host,
+      imap_port: account.imap_port,
+      imap_username: account.imap_username,
+      use_ssl: account.use_ssl,
+      smtp_host: account.smtp_host,
+      smtp_port: account.smtp_port,
+      smtp_username: account.smtp_username,
+      smtp_use_ssl: account.smtp_use_ssl,
+    });
     setEditError('');
   };
 
@@ -203,19 +242,49 @@ export default function MailAccountManagementPage() {
               />
             </Box>
 
+            <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', px: 1 }}>SMTP Settings</Typography>
+            </Divider>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 2, mb: 2 }}>
+              <TextField label="SMTP Host" value={form.smtp_host} onChange={e => setForm(f => ({ ...f, smtp_host: e.target.value }))} disabled={isSubmitting} required />
+              <TextField label="Port" type="number" value={form.smtp_port} onChange={e => setForm(f => ({ ...f, smtp_port: parseInt(e.target.value) || 465 }))} disabled={isSubmitting} required inputProps={{ min: 1, max: 65535 }} />
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: 2, mb: 2, alignItems: 'center' }}>
+              <TextField label="SMTP Username" value={form.smtp_username} onChange={e => setForm(f => ({ ...f, smtp_username: e.target.value }))} disabled={isSubmitting} required />
+              <TextField label="SMTP Password" type="password" value={form.smtp_password} onChange={e => setForm(f => ({ ...f, smtp_password: e.target.value }))} disabled={isSubmitting} required />
+              <FormControlLabel
+                control={<Switch checked={form.smtp_use_ssl} onChange={e => setForm(f => ({ ...f, smtp_use_ssl: e.target.checked }))} disabled={isSubmitting} />}
+                label="SSL"
+                sx={{ color: 'white' }}
+              />
+            </Box>
+
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <Button type="submit" variant="contained" disabled={isSubmitting} sx={{ px: 4, py: 1.5, fontWeight: 600, textTransform: 'none' }}>
                 {isSubmitting ? 'Adding...' : 'Add Account'}
               </Button>
               <Button variant="outlined" onClick={handleTest} disabled={isTesting || !form.imap_host || !form.imap_username || !form.imap_password}
                 sx={{ px: 3, py: 1.5, textTransform: 'none' }}>
-                {isTesting ? 'Testing...' : 'Test Connection'}
+                {isTesting ? 'Testing IMAP...' : 'Test IMAP'}
               </Button>
               {testResult && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   {testResult.ok
-                    ? <><IoCheckmarkCircle color="#4caf50" size={20} /><Typography variant="body2" sx={{ color: '#4caf50' }}>Connected</Typography></>
+                    ? <><IoCheckmarkCircle color="#4caf50" size={20} /><Typography variant="body2" sx={{ color: '#4caf50' }}>IMAP Connected</Typography></>
                     : <><IoCloseCircle color="#f44336" size={20} /><Typography variant="body2" sx={{ color: '#f44336' }}>{testResult.error || 'Failed'}</Typography></>
+                  }
+                </Box>
+              )}
+              <Button variant="outlined" onClick={handleSmtpTest} disabled={isSmtpTesting || !form.smtp_host || !form.smtp_username || !form.smtp_password}
+                sx={{ px: 3, py: 1.5, textTransform: 'none' }}>
+                {isSmtpTesting ? 'Testing SMTP...' : 'Test SMTP'}
+              </Button>
+              {smtpTestResult && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  {smtpTestResult.ok
+                    ? <><IoCheckmarkCircle color="#4caf50" size={20} /><Typography variant="body2" sx={{ color: '#4caf50' }}>SMTP Connected</Typography></>
+                    : <><IoCloseCircle color="#f44336" size={20} /><Typography variant="body2" sx={{ color: '#f44336' }}>{smtpTestResult.error || 'Failed'}</Typography></>
                   }
                 </Box>
               )}
@@ -234,10 +303,11 @@ export default function MailAccountManagementPage() {
             <TableHead>
               <TableRow>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Name</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Host</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Port</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>IMAP Host</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>IMAP Port</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Username</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>SSL</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>SMTP Host</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>SMTP Port</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -248,7 +318,8 @@ export default function MailAccountManagementPage() {
                   <TableCell sx={{ color: 'white' }}>{account.imap_host}</TableCell>
                   <TableCell sx={{ color: 'white' }}>{account.imap_port}</TableCell>
                   <TableCell sx={{ color: 'white' }}>{account.imap_username}</TableCell>
-                  <TableCell sx={{ color: 'white' }}>{account.use_ssl ? 'Yes' : 'No'}</TableCell>
+                  <TableCell sx={{ color: 'white' }}>{account.smtp_host || '—'}</TableCell>
+                  <TableCell sx={{ color: 'white' }}>{account.smtp_port || '—'}</TableCell>
                   <TableCell>
                     <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={() => openEdit(account)}>
                       <IoPencil size={18} />
@@ -260,7 +331,7 @@ export default function MailAccountManagementPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={7} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
                     No mail accounts yet.
                   </TableCell>
                 </TableRow>
@@ -277,13 +348,26 @@ export default function MailAccountManagementPage() {
           {editError && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{editError}</Alert>}
           <Box component="form" id="edit-mail-form" onSubmit={handleEdit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField label="Account Name" value={editForm.name || ''} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} disabled={isEditSubmitting} fullWidth />
+            <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', px: 1 }}>IMAP</Typography>
+            </Divider>
             <TextField label="IMAP Host" value={editForm.imap_host || ''} onChange={e => setEditForm(f => ({ ...f, imap_host: e.target.value }))} disabled={isEditSubmitting} fullWidth />
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField label="Port" type="number" value={editForm.imap_port || ''} onChange={e => setEditForm(f => ({ ...f, imap_port: parseInt(e.target.value) || undefined }))} disabled={isEditSubmitting} inputProps={{ min: 1, max: 65535 }} sx={{ flex: 1 }} />
+              <TextField label="IMAP Port" type="number" value={editForm.imap_port || ''} onChange={e => setEditForm(f => ({ ...f, imap_port: parseInt(e.target.value) || undefined }))} disabled={isEditSubmitting} inputProps={{ min: 1, max: 65535 }} sx={{ flex: 1 }} />
               <FormControlLabel control={<Switch checked={editForm.use_ssl ?? true} onChange={e => setEditForm(f => ({ ...f, use_ssl: e.target.checked }))} disabled={isEditSubmitting} />} label="SSL" sx={{ flex: 1 }} />
             </Box>
-            <TextField label="Username" value={editForm.imap_username || ''} onChange={e => setEditForm(f => ({ ...f, imap_username: e.target.value }))} disabled={isEditSubmitting} fullWidth />
-            <TextField label="New Password (leave blank to keep)" type="password" value={editForm.imap_password || ''} onChange={e => setEditForm(f => ({ ...f, imap_password: e.target.value || undefined }))} disabled={isEditSubmitting} fullWidth />
+            <TextField label="IMAP Username" value={editForm.imap_username || ''} onChange={e => setEditForm(f => ({ ...f, imap_username: e.target.value }))} disabled={isEditSubmitting} fullWidth />
+            <TextField label="IMAP Password (leave blank to keep)" type="password" value={editForm.imap_password || ''} onChange={e => setEditForm(f => ({ ...f, imap_password: e.target.value || undefined }))} disabled={isEditSubmitting} fullWidth />
+            <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', px: 1 }}>SMTP</Typography>
+            </Divider>
+            <TextField label="SMTP Host" value={editForm.smtp_host || ''} onChange={e => setEditForm(f => ({ ...f, smtp_host: e.target.value }))} disabled={isEditSubmitting} fullWidth />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField label="SMTP Port" type="number" value={editForm.smtp_port || ''} onChange={e => setEditForm(f => ({ ...f, smtp_port: parseInt(e.target.value) || undefined }))} disabled={isEditSubmitting} inputProps={{ min: 1, max: 65535 }} sx={{ flex: 1 }} />
+              <FormControlLabel control={<Switch checked={editForm.smtp_use_ssl ?? true} onChange={e => setEditForm(f => ({ ...f, smtp_use_ssl: e.target.checked }))} disabled={isEditSubmitting} />} label="SSL" sx={{ flex: 1 }} />
+            </Box>
+            <TextField label="SMTP Username" value={editForm.smtp_username || ''} onChange={e => setEditForm(f => ({ ...f, smtp_username: e.target.value }))} disabled={isEditSubmitting} fullWidth />
+            <TextField label="SMTP Password (leave blank to keep)" type="password" value={editForm.smtp_password || ''} onChange={e => setEditForm(f => ({ ...f, smtp_password: e.target.value || undefined }))} disabled={isEditSubmitting} fullWidth />
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

@@ -80,7 +80,7 @@ export default function DashboardLayout({ children, userName, userRole }: Dashbo
     submenu: inboxes.map((inbox, i) => ({
       label: inbox.name,
       href: `/inbox/${inbox.id}`,
-      color: getInboxColor(i),
+      color: inbox.color || getInboxColor(i),
     })),
   };
 

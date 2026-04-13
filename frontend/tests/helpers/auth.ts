@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 
 export interface TestUser {
   fullName: string;
@@ -9,28 +9,31 @@ export interface TestUser {
 
 export async function signupUser(page: Page, user: TestUser): Promise<void> {
   await page.goto('/register');
-  await page.getByPlaceholder('John Doe').fill(user.fullName);
-  await page.getByPlaceholder('you@example.com').fill(user.email);
-  await page.getByPlaceholder('••••••••••••••••').first().fill(user.password);
-  await page.getByPlaceholder('••••••••••••••••').last().fill(user.password);
-  await page.getByRole('button', { name: 'Register' }).click();
+  await page.getByTestId('register-fullname-input').fill(user.fullName);
+  await page.getByTestId('register-email-input').fill(user.email);
+  await page.getByTestId('register-password-input').fill(user.password);
+  await page.getByTestId('register-confirm-password-input').fill(user.password);
+  await page.getByTestId('register-submit-button').click();
+  await expect(page).toHaveURL('/onboarding', { timeout: 10000 });
 }
 
-export async function loginUser(page: Page, user: TestUser): Promise<void> {
+export async function loginUser(page: Page, user: Pick<TestUser, 'email' | 'password'>): Promise<void> {
   await page.goto('/login');
-  await page.getByPlaceholder('you@example.com').fill(user.email);
-  await page.getByPlaceholder('••••••••••••••••').fill(user.password);
-  await page.getByRole('button', { name: 'Login' }).click();
-}
-
-export async function createOrganization(page: Page, orgName: string): Promise<void> {
-  await page.getByPlaceholder('My Company').fill(orgName);
-  await page.getByRole('button', { name: 'Create Organization' }).click();
+  await page.getByTestId('login-email-input').fill(user.email);
+  await page.getByTestId('login-password-input').fill(user.password);
+  await page.getByTestId('login-submit-button').click();
+  await expect(page).toHaveURL('/dashboard', { timeout: 10000 });
 }
 
 export async function completeOnboarding(page: Page, user: TestUser): Promise<void> {
+  const orgName = user.orgName || `Test Org ${Date.now()}`;
   await signupUser(page, user);
-  await createOrganization(page, user.orgName || `Test Org ${Date.now()}`);
+  await page.getByTestId('show-create-org-button').click();
+  await page.getByTestId('onboarding-org-name-input').fill(orgName);
+  await page.getByTestId('onboarding-create-org-button').click();
+  await expect(page.getByText('Your Organizations')).toBeVisible({ timeout: 10000 });
+  await page.getByText(orgName).click();
+  await expect(page).toHaveURL('/dashboard', { timeout: 15000 });
 }
 
 export async function logout(page: Page): Promise<void> {

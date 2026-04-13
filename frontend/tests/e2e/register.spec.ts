@@ -32,14 +32,10 @@ test.describe("Registration Flow", () => {
     await expect(page.getByTestId("dashboard-greeting")).toBeVisible();
   });
 
-  test("should show validation errors on signup", async ({ page }) => {
+  test("should show validation error for short password", async ({ page }) => {
     const testUser = generateTestUser("validation");
 
     await page.goto("/register");
-
-    await page.getByTestId("register-submit-button").click();
-    await expect(page.getByTestId("register-error")).toBeVisible();
-
     await page.getByTestId("register-fullname-input").fill(testUser.fullName);
     await page.getByTestId("register-email-input").fill(testUser.email);
     await page.getByTestId("register-password-input").fill("short");
@@ -47,7 +43,14 @@ test.describe("Registration Flow", () => {
     await page.getByTestId("register-submit-button").click();
 
     await expect(page.getByTestId("register-error")).toBeVisible();
+  });
 
+  test("should show validation error for password mismatch", async ({ page }) => {
+    const testUser = generateTestUser("mismatch");
+
+    await page.goto("/register");
+    await page.getByTestId("register-fullname-input").fill(testUser.fullName);
+    await page.getByTestId("register-email-input").fill(testUser.email);
     await page.getByTestId("register-password-input").fill("password123");
     await page.getByTestId("register-confirm-password-input").fill("different123");
     await page.getByTestId("register-submit-button").click();
