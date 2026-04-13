@@ -101,6 +101,7 @@ export interface Inbox {
   org_id: string;
   name: string;
   description?: string;
+  color?: string;
   mail_account_ids?: string[];
   is_system: boolean;
   created_at: string;
@@ -110,12 +111,14 @@ export interface Inbox {
 export interface InboxCreateData {
   name: string;
   description?: string;
+  color?: string;
   mail_account_ids?: string[];
 }
 
 export interface InboxUpdateData {
   name?: string;
   description?: string;
+  color?: string;
   mail_account_ids?: string[];
 }
 
@@ -127,6 +130,10 @@ export interface MailAccount {
   imap_port: number;
   imap_username: string;
   use_ssl: boolean;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_username: string;
+  smtp_use_ssl: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -138,6 +145,11 @@ export interface MailAccountCreateData {
   imap_username: string;
   imap_password: string;
   use_ssl: boolean;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_username: string;
+  smtp_password: string;
+  smtp_use_ssl: boolean;
 }
 
 export interface MailAccountUpdateData {
@@ -147,6 +159,19 @@ export interface MailAccountUpdateData {
   imap_username?: string;
   imap_password?: string;
   use_ssl?: boolean;
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_username?: string;
+  smtp_password?: string;
+  smtp_use_ssl?: boolean;
+}
+
+export interface MailAccountSmtpTestData {
+  smtp_host: string;
+  smtp_port: number;
+  smtp_username: string;
+  smtp_password: string;
+  smtp_use_ssl: boolean;
 }
 
 export const mailAccountApi = {
@@ -158,13 +183,23 @@ export const mailAccountApi = {
     return res.json();
   },
 
-  test: async (orgId: string, data: Omit<MailAccountCreateData, 'name'>, token: string): Promise<{ ok: boolean; error?: string }> => {
+  test: async (orgId: string, data: Omit<MailAccountCreateData, 'name' | 'smtp_host' | 'smtp_port' | 'smtp_username' | 'smtp_password' | 'smtp_use_ssl'>, token: string): Promise<{ ok: boolean; error?: string }> => {
     const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to test connection');
+    return res.json();
+  },
+
+  testSmtp: async (orgId: string, data: MailAccountSmtpTestData, token: string): Promise<{ ok: boolean; error?: string }> => {
+    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts/test-smtp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to test SMTP connection');
     return res.json();
   },
 

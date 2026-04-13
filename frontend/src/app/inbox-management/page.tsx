@@ -35,7 +35,7 @@ import { useInboxes } from '@/hooks/useInboxes';
 import { inboxApi, mailAccountApi, InboxCreateData, InboxUpdateData, Inbox, MailAccount, organizationApi, Member } from '@/lib/api';
 import useSWR from 'swr';
 
-const DEFAULT_FORM: InboxCreateData = { name: '', description: '' };
+const DEFAULT_FORM: InboxCreateData = { name: '', description: '', color: undefined };
 
 export default function InboxManagementPage() {
   const router = useRouter();
@@ -94,6 +94,7 @@ export default function InboxManagementPage() {
       await inboxApi.create(currentOrg.id, {
         name: form.name,
         description: form.description || undefined,
+        color: form.color || undefined,
         mail_account_ids: selectedMailAccountIds.length > 0 ? selectedMailAccountIds : undefined,
       }, token);
       await mutate();
@@ -109,7 +110,7 @@ export default function InboxManagementPage() {
 
   const openEdit = (inbox: Inbox) => {
     setEditInbox(inbox);
-    setEditForm({ name: inbox.name, description: inbox.description || '' });
+    setEditForm({ name: inbox.name, description: inbox.description || '', color: inbox.color });
     setEditSelectedMailAccountIds(inbox.mail_account_ids ?? []);
     setEditError('');
   };
@@ -195,6 +196,38 @@ export default function InboxManagementPage() {
                 rows={3}
                 required
               />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+                  <Box sx={{
+                    width: 36, height: 36, borderRadius: 1,
+                    bgcolor: form.color || '#444',
+                    border: '2px solid rgba(255,255,255,0.15)',
+                  }} />
+                  <Box
+                    component="input"
+                    type="color"
+                    value={form.color || '#888888'}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, color: e.target.value }))}
+                    disabled={isSubmitting}
+                    sx={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+                  />
+                </Box>
+                <TextField
+                  label="Color (hex)"
+                  value={form.color || ''}
+                  onChange={e => setForm(f => ({ ...f, color: e.target.value || undefined }))}
+                  placeholder="None"
+                  inputProps={{ maxLength: 20 }}
+                  disabled={isSubmitting}
+                  size="small"
+                  sx={{ width: 140 }}
+                />
+                {form.color && (
+                  <Button size="small" onClick={() => setForm(f => ({ ...f, color: undefined }))} sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}>
+                    Clear
+                  </Button>
+                )}
+              </Box>
             </Box>
 
             {mailAccounts && mailAccounts.length > 0 && (
@@ -241,6 +274,7 @@ export default function InboxManagementPage() {
             <TableHead>
               <TableRow>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Name</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 600, width: 60 }}>Color</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Description</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Mail Accounts</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Actions</TableCell>
@@ -253,6 +287,13 @@ export default function InboxManagementPage() {
                     {inbox.name}
                     {inbox.is_system && (
                       <Chip label="system" size="small" sx={{ ml: 1, bgcolor: '#444', color: 'text.secondary', fontSize: '0.65rem' }} />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {inbox.color ? (
+                      <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: inbox.color, border: '1px solid rgba(255,255,255,0.15)' }} />
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#555' }}>—</Typography>
                     )}
                   </TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>{inbox.description || '—'}</TableCell>
@@ -278,7 +319,7 @@ export default function InboxManagementPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={5} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
                     No categories yet.
                   </TableCell>
                 </TableRow>
@@ -296,6 +337,38 @@ export default function InboxManagementPage() {
           <Box component="form" id="edit-form" onSubmit={handleEdit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField label="Name" value={editForm.name || ''} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} disabled={isEditSubmitting} fullWidth />
             <TextField label="Description (for AI)" value={editForm.description || ''} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} disabled={isEditSubmitting} fullWidth multiline rows={2} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ position: 'relative', width: 36, height: 36, flexShrink: 0 }}>
+                <Box sx={{
+                  width: 36, height: 36, borderRadius: 1,
+                  bgcolor: editForm.color || '#444',
+                  border: '2px solid rgba(255,255,255,0.15)',
+                }} />
+                <Box
+                  component="input"
+                  type="color"
+                  value={editForm.color || '#888888'}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm(f => ({ ...f, color: e.target.value }))}
+                  disabled={isEditSubmitting}
+                  sx={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+                />
+              </Box>
+              <TextField
+                label="Color (hex)"
+                value={editForm.color || ''}
+                onChange={e => setEditForm(f => ({ ...f, color: e.target.value || undefined }))}
+                placeholder="None"
+                inputProps={{ maxLength: 20 }}
+                disabled={isEditSubmitting}
+                size="small"
+                sx={{ width: 140 }}
+              />
+              {editForm.color && (
+                <Button size="small" onClick={() => setEditForm(f => ({ ...f, color: undefined }))} sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}>
+                  Clear
+                </Button>
+              )}
+            </Box>
             {mailAccounts && mailAccounts.length > 0 && (
               <Box>
                 <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
