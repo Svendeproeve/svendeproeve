@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -24,8 +24,9 @@ import {
   DialogContent,
   DialogActions,
   Divider,
+  Tooltip,
 } from '@mui/material';
-import { IoTrash, IoPencil, IoCheckmarkCircle, IoCloseCircle } from 'react-icons/io5';
+import { IoTrash, IoPencil, IoCheckmarkCircle, IoCloseCircle, IoRefresh } from 'react-icons/io5';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -82,6 +83,26 @@ export default function MailAccountManagementPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<MailAccount | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  type ConnectionStatus = { ok: boolean; error?: string };
+  type AccountStatus = { imap?: ConnectionStatus; smtp: ConnectionStatus | null; loading: boolean };
+  const [accountStatuses, setAccountStatuses] = useState<Record<string, AccountStatus>>({});
+
+  const fetchAccountStatus = useCallback(async (accountId: string) => {
+    if (!currentOrg || !token) return;
+    setAccountStatuses(prev => ({ ...prev, [accountId]: { ...prev[accountId], loading: true } }));
+    try {
+      const result = await mailAccountApi.testStatus(currentOrg.id, accountId, token);
+      setAccountStatuses(prev => ({ ...prev, [accountId]: { imap: result.imap, smtp: result.smtp, loading: false } }));
+    } catch {
+      setAccountStatuses(prev => ({ ...prev, [accountId]: { imap: { ok: false, error: 'Failed to fetch' }, smtp: null, loading: false } }));
+    }
+  }, [currentOrg, token]);
+
+  useEffect(() => {
+    if (!mailAccounts) return;
+    mailAccounts.forEach(account => fetchAccountStatus(account.id));
+  }, [mailAccounts, fetchAccountStatus]);
 
   useEffect(() => {
     if (isLoadingAuth) return;
@@ -177,8 +198,10 @@ export default function MailAccountManagementPage() {
     setEditError('');
     try {
       await mailAccountApi.update(currentOrg.id, editAccount.id, editForm, token);
+      const updatedId = editAccount.id;
       await mutate();
       setEditAccount(null);
+      fetchAccountStatus(updatedId);
     } catch (err: any) {
       setEditError(err.message || 'Failed to update mail account');
     } finally {
@@ -308,30 +331,58 @@ export default function MailAccountManagementPage() {
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Username</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>SMTP Host</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>SMTP Port</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>IMAP Status</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>SMTP Status</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {mailAccounts && mailAccounts.length > 0 ? mailAccounts.map(account => (
-                <TableRow key={account.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
-                  <TableCell sx={{ color: 'white' }}>{account.name}</TableCell>
-                  <TableCell sx={{ color: 'white' }}>{account.imap_host}</TableCell>
-                  <TableCell sx={{ color: 'white' }}>{account.imap_port}</TableCell>
-                  <TableCell sx={{ color: 'white' }}>{account.imap_username}</TableCell>
-                  <TableCell sx={{ color: 'white' }}>{account.smtp_host || '—'}</TableCell>
-                  <TableCell sx={{ color: 'white' }}>{account.smtp_port || '—'}</TableCell>
-                  <TableCell>
-                    <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={() => openEdit(account)}>
-                      <IoPencil size={18} />
-                    </IconButton>
-                    <IconButton size="small" sx={{ color: '#f44336' }} onClick={() => setDeleteTarget(account)}>
-                      <IoTrash size={18} />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              )) : (
+              {mailAccounts && mailAccounts.length > 0 ? mailAccounts.map(account => {
+                const status = accountStatuses[account.id];
+                return (
+                  <TableRow key={account.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
+                    <TableCell sx={{ color: 'white' }}>{account.name}</TableCell>
+                    <TableCell sx={{ color: 'white' }}>{account.imap_host}</TableCell>
+                    <TableCell sx={{ color: 'white' }}>{account.imap_port}</TableCell>
+                    <TableCell sx={{ color: 'white' }}>{account.imap_username}</TableCell>
+                    <TableCell sx={{ color: 'white' }}>{account.smtp_host || '—'}</TableCell>
+                    <TableCell sx={{ color: 'white' }}>{account.smtp_port || '—'}</TableCell>
+                    <TableCell>
+                      {!status || status.loading
+                        ? <CircularProgress size={16} />
+                        : status.imap?.ok
+                          ? <Tooltip title="Connected"><Box component="span"><IoCheckmarkCircle color="#4caf50" size={20} /></Box></Tooltip>
+                          : <Tooltip title={status.imap?.error || 'Failed'}><Box component="span"><IoCloseCircle color="#f44336" size={20} /></Box></Tooltip>
+                      }
+                    </TableCell>
+                    <TableCell>
+                      {!status || status.loading
+                        ? <CircularProgress size={16} />
+                        : status.smtp === null
+                          ? <Typography variant="body2" sx={{ color: 'text.secondary' }}>—</Typography>
+                          : status.smtp.ok
+                            ? <Tooltip title="Connected"><Box component="span"><IoCheckmarkCircle color="#4caf50" size={20} /></Box></Tooltip>
+                            : <Tooltip title={status.smtp.error || 'Failed'}><Box component="span"><IoCloseCircle color="#f44336" size={20} /></Box></Tooltip>
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title="Refresh status">
+                        <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={() => fetchAccountStatus(account.id)} disabled={status?.loading}>
+                          <IoRefresh size={18} />
+                        </IconButton>
+                      </Tooltip>
+                      <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={() => openEdit(account)}>
+                        <IoPencil size={18} />
+                      </IconButton>
+                      <IconButton size="small" sx={{ color: '#f44336' }} onClick={() => setDeleteTarget(account)}>
+                        <IoTrash size={18} />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                );
+              }) : (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={9} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
                     No mail accounts yet.
                   </TableCell>
                 </TableRow>
