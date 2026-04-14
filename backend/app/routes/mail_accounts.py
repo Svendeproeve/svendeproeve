@@ -101,6 +101,73 @@ def test_smtp(
         return {"ok": False, "error": str(exc)}
 
 
+@router.get("/{mail_account_id}/status", response_model=dict)
+def get_mail_account_status(
+    org_id: str,
+    mail_account_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    require_org_membership(org_id, str(current_user["_id"]))
+    oid = parse_object_id(mail_account_id, "mail_account_id")
+    doc = mail_accounts_collection.find_one({"_id": oid, "org_id": org_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Mail account not found")
+
+    # Test IMAP
+    imap_result: dict = {}
+    try:
+        if doc["use_ssl"]:
+            imap = imaplib.IMAP4_SSL(doc["imap_host"], doc["imap_port"], timeout=10)
+        else:
+            imap = imaplib.IMAP4(doc["imap_host"], doc["imap_port"], timeout=10)
+        try:
+            imap.login(doc["imap_username"], doc["imap_password"])
+            try:
+                imap.select("INBOX", readonly=True)
+            except Exception:
+                pass
+            imap.logout()
+        finally:
+            try:
+                imap.shutdown()
+            except Exception:
+                pass
+        imap_result = {"ok": True}
+    except Exception as exc:
+        imap_result = {"ok": False, "error": str(exc)}
+
+    # Test SMTP (only if smtp_host is configured)
+    smtp_result: dict | None = None
+    smtp_host = doc.get("smtp_host", "")
+    if smtp_host:
+        try:
+            if doc.get("smtp_use_ssl", True):
+                server = smtplib.SMTP_SSL(smtp_host, doc.get("smtp_port", 465), timeout=10)
+            else:
+                server = smtplib.SMTP(smtp_host, doc.get("smtp_port", 587), timeout=10)
+            try:
+                server.ehlo()
+                if not doc.get("smtp_use_ssl", True):
+                    try:
+                        server.starttls()
+                        server.ehlo()
+                    except Exception:
+                        pass
+                server.login(doc.get("smtp_username", ""), doc.get("smtp_password", ""))
+                server.noop()
+                server.quit()
+            finally:
+                try:
+                    server.close()
+                except Exception:
+                    pass
+            smtp_result = {"ok": True}
+        except Exception as exc:
+            smtp_result = {"ok": False, "error": str(exc)}
+
+    return {"imap": imap_result, "smtp": smtp_result}
+
+
 @router.post("", response_model=MailAccountOut, status_code=status.HTTP_201_CREATED)
 def create_mail_account(
     org_id: str,

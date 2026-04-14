@@ -109,6 +109,17 @@ export const mailAccountApi = {
     return res.json();
   },
 
+  testStatus: async (orgId: string, mailAccountId: string, token: string): Promise<{
+    imap: { ok: boolean; error?: string };
+    smtp: { ok: boolean; error?: string } | null;
+  }> => {
+    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts/${mailAccountId}/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch account status');
+    return res.json();
+  },
+
   delete: async (orgId: string, mailAccountId: string, token: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts/${mailAccountId}`, {
       method: 'DELETE',
