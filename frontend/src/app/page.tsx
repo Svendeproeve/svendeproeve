@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Typography, Button, Container, Grid, Card, CardContent, CircularProgress } from '@mui/material';
+import { Box, Typography, Button, Container, CircularProgress } from '@mui/material';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {
@@ -17,15 +17,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'background.default',
-        }}
-      >
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#0d1b2a' }}>
         <CircularProgress />
       </Box>
     );
@@ -36,141 +28,223 @@ export default function Home() {
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        bgcolor: 'background.default',
-        py: 8,
-      }}
-    >
-      <Container maxWidth="lg">
-        <Box
-          sx={{
-            textAlign: 'center',
-            mb: 8,
-            mt: 8,
-          }}
-        >
-          <Typography
-            variant="h1"
-            data-testid="landing-title"
+    <Box sx={{ minHeight: '100vh', bgcolor: '#1a1a1a' }}>
+
+      {/* Navbar + Hero share the same gradient background */}
+      <Box
+        sx={{
+          background: 'linear-gradient(160deg, #1e6ab5 0%, #1a4d8f 35%, #0f2d5e 65%, #081a3a 100%)',
+          pb: { xs: 10, md: 14 },
+        }}
+      >
+        {/* Navbar — floating box aligned with page container */}
+        <Container maxWidth="lg" sx={{ pt: { xs: 2, md: 2.5 }, px: { xs: 2, md: 3 } }}>
+          <Box
+            component="nav"
             sx={{
-              fontSize: { xs: '3rem', md: '5rem' },
-              
-              mb: 3,
-              color: 'white',
+              px: { xs: 2.5, md: 4 },
+              py: 1.5,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              bgcolor: '#1B1B1B',
+              borderRadius: 1.5,
             }}
           >
+          <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.3px' }}>
             Sortr
           </Typography>
-
-          <Typography
-            variant="h5"
-            data-testid="landing-tagline"
-            sx={{
-              mb: 2,
-              color: 'text.secondary',
-              
-              maxWidth: 600,
-              mx: 'auto',
-            }}
-          >
-            Smart email management powered by AI
-          </Typography>
-
-          <Typography
-            variant="body1"
-            sx={{
-              mb: 5,
-              color: 'text.secondary',
-              maxWidth: 500,
-              mx: 'auto',
-            }}
-          >
-            Automatically organize, classify, and prioritize your emails with intelligent filtering and team collaboration.
-          </Typography>
-
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Button
-              variant="contained"
-              size="large"
-              data-testid="get-started-button"
-              onClick={() => router.push('/register')}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, md: 4 } }}>
+            <Typography
               sx={{
-                py: 1.5,
-                px: 4,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                textTransform: 'none',
+                color: 'rgba(255,255,255,0.85)',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                '&:hover': { color: 'white' },
               }}
             >
-              Get Started
-            </Button>
+              Pricing
+            </Typography>
+            <Typography
+              sx={{
+                color: 'rgba(255,255,255,0.85)',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                '&:hover': { color: 'white' },
+              }}
+            >
+              About
+            </Typography>
             <Button
               variant="outlined"
-              size="large"
+              size="small"
               data-testid="login-button"
               onClick={() => router.push('/login')}
               sx={{
-                py: 1.5,
-                px: 4,
-                fontSize: '1.1rem',
-                fontWeight: 600,
                 textTransform: 'none',
-                borderColor: 'rgba(255,255,255,0.3)',
+                px: 2.5,
+                py: 0.6,
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                borderColor: 'rgba(255,255,255,0.6)',
                 color: 'white',
                 '&:hover': {
-                  borderColor: 'rgba(255,255,255,0.5)',
-                  bgcolor: 'rgba(255,255,255,0.05)',
+                  borderColor: 'white',
+                  bgcolor: 'rgba(255,255,255,0.08)',
                 },
               }}
             >
-              Login
+              Log In
             </Button>
           </Box>
-        </Box>
+          </Box>
+        </Container>
 
-        <Grid container spacing={4} sx={{ mt: 4 }}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card sx={{ bgcolor: '#4a4a4a', height: '100%' }}>
-              <CardContent sx={{ p: 4 }}>
-                <Typography variant="h6" sx={{ color: 'white', mb: 2, fontWeight: 600 }}>
-                  AI-Powered Classification
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Automatically classify and prioritize emails with advanced AI models that understand context and urgency.
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+        {/* Hero content */}
+        <Container maxWidth="lg" sx={{ px: { xs: 3, md: 6 } }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: { xs: 0, md: 8 },
+              flexDirection: { xs: 'column', md: 'row' },
+              pt: { xs: 4, md: 6 },
+            }}
+          >
+            {/* Left: text content */}
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                data-testid="landing-title"
+                sx={{
+                  color: 'white',
+                  fontWeight: 800,
+                  fontSize: { xs: '2.4rem', md: '3.5rem' },
+                  lineHeight: 1.05,
+                  textTransform: 'uppercase',
+                  mb: 2.5,
+                  letterSpacing: '-0.5px',
+                }}
+              >
+                AI-Powered Email Management System
+              </Typography>
+              <Typography
+                data-testid="landing-tagline"
+                sx={{
+                  color: 'rgba(255,255,255,0.65)',
+                  fontSize: '0.78rem',
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  mb: 5,
+                }}
+              >
+                Optimize your workflows with AI
+              </Typography>
+              <Button
+                variant="outlined"
+                size="large"
+                data-testid="get-started-button"
+                onClick={() => router.push('/register')}
+                sx={{
+                  textTransform: 'uppercase',
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  borderColor: 'white',
+                  color: 'white',
+                  '&:hover': {
+                    borderColor: 'white',
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                  },
+                }}
+              >
+                Get Started Now
+              </Button>
+            </Box>
 
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card sx={{ bgcolor: '#4a4a4a', height: '100%' }}>
-              <CardContent sx={{ p: 4 }}>
-                <Typography variant="h6" sx={{ color: 'white', mb: 2, fontWeight: 600 }}>
-                  Team Collaboration
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Work together with your team on shared inboxes with role-based access control and permissions.
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+            {/* Right: illustration placeholder — plain text, no box */}
+            <Box
+              sx={{
+                flex: 1,
+                display: { xs: 'none', md: 'flex' },
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography
+                sx={{
+                  color: 'rgba(255,255,255,0.35)',
+                  fontSize: '0.78rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.18em',
+                }}
+              >
+                Insert Illustration
+              </Typography>
+            </Box>
+          </Box>
+        </Container>
+      </Box>
 
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card sx={{ bgcolor: '#4a4a4a', height: '100%' }}>
-              <CardContent sx={{ p: 4 }}>
-                <Typography variant="h6" sx={{ color: 'white', mb: 2, fontWeight: 600 }}>
-                  Smart Filtering
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Create custom filters with natural language rules that intelligently route emails to the right inbox.
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </Container>
+      {/* Trusted By Section */}
+      <Box sx={{ bgcolor: '#222222', py: { xs: 5, md: 6 }, px: { xs: 3, md: 6 } }}>
+        <Typography
+          sx={{
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: '0.7rem',
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            textAlign: 'center',
+            mb: 4,
+          }}
+        >
+          Trusted by Global Leaders
+        </Typography>
+      </Box>
+
+
+
+      {/* Testimonial Section */}
+      <Box sx={{ bgcolor: '#1a1a1a', py: { xs: 6, md: 8 }, px: { xs: 3, md: 6 } }}>
+        <Container maxWidth="lg">
+          <Box sx={{ bgcolor: '#111111', borderRadius: 2, p: { xs: 4, md: 6 } }}>
+            <Typography
+              sx={{
+                color: 'white',
+                fontWeight: 700,
+                fontSize: { xs: '0.85rem', md: '1rem' },
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                mb: 1.5,
+              }}
+            >
+              Sortr has helped our mismanagement alot
+            </Typography>
+            <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+              If this were an school exam we would give this project a grade of 12.
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Footer */}
+      <Box
+        component="footer"
+        sx={{
+          bgcolor: '#1a1a1a',
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+          py: 3,
+          px: { xs: 3, md: 6 },
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '1.2rem', letterSpacing: '-0.3px' }}>
+            Sortr
+          </Typography>
+        </Container>
+      </Box>
+
     </Box>
   );
 }
