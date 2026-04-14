@@ -252,14 +252,16 @@ export default function UserManagementPage() {
                     {new Date(member.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <IconButton
-                      size="small"
-                      sx={{ color: 'text.secondary' }}
-                      onClick={() => openAccessDialog(member)}
-                      title="Manage inbox access"
-                    >
-                      <IoKey size={18} />
-                    </IconButton>
+                    {member.role !== 'owner' && (
+                      <IconButton
+                        size="small"
+                        sx={{ color: 'text.secondary' }}
+                        onClick={() => openAccessDialog(member)}
+                        title="Manage inbox access"
+                      >
+                        <IoKey size={18} />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
