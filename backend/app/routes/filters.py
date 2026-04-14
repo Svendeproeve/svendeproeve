@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.db import filters_collection, inboxes_collection
+from app.db import categories_collection, filters_collection
 from app.dependencies import get_current_user, require_org_admin, require_org_membership
 from app.schemas import FilterCreateRequest, FilterOut, FilterUpdateRequest
 from app.utils import parse_object_id
@@ -17,7 +17,7 @@ def _to_filter_out(doc: dict) -> FilterOut:
         name=doc["name"],
         description=doc.get("description"),
         match_query=doc["match_query"],
-        target_inbox_id=doc["target_inbox_id"],
+        target_category_id=doc["target_category_id"],
         is_active=doc["is_active"],
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
@@ -31,10 +31,10 @@ def create_filter(
     current_user: dict = Depends(get_current_user),
 ):
     require_org_admin(org_id, str(current_user["_id"]))
-    target_oid = parse_object_id(payload.target_inbox_id, "target_inbox_id")
-    target = inboxes_collection.find_one({"_id": target_oid, "org_id": org_id})
+    target_oid = parse_object_id(payload.target_category_id, "target_category_id")
+    target = categories_collection.find_one({"_id": target_oid, "org_id": org_id})
     if not target:
-        raise HTTPException(status_code=400, detail="Target inbox not found in organization")
+        raise HTTPException(status_code=400, detail="Target category not found in organization")
 
     now = datetime.now(timezone.utc)
     doc = {
@@ -42,7 +42,7 @@ def create_filter(
         "name": payload.name.strip(),
         "description": payload.description,
         "match_query": payload.match_query.strip(),
-        "target_inbox_id": payload.target_inbox_id,
+        "target_category_id": payload.target_category_id,
         "is_active": payload.is_active,
         "created_at": now,
         "updated_at": now,
@@ -73,12 +73,12 @@ def update_filter(
         raise HTTPException(status_code=404, detail="Filter not found")
 
     update = payload.model_dump(exclude_unset=True)
-    if "target_inbox_id" in update and update["target_inbox_id"] is not None:
-        target_oid = parse_object_id(update["target_inbox_id"], "target_inbox_id")
-        target = inboxes_collection.find_one({"_id": target_oid, "org_id": org_id})
+    if "target_category_id" in update and update["target_category_id"] is not None:
+        target_oid = parse_object_id(update["target_category_id"], "target_category_id")
+        target = categories_collection.find_one({"_id": target_oid, "org_id": org_id})
         if not target:
             raise HTTPException(
-                status_code=400, detail="Target inbox not found in organization"
+                status_code=400, detail="Target category not found in organization"
             )
     if update:
         update["updated_at"] = datetime.now(timezone.utc)

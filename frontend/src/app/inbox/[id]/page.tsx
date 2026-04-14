@@ -1,5 +1,6 @@
 'use client';
 
+import { use } from 'react';
 import {
   Box,
   Typography,
@@ -9,74 +10,55 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
+  CircularProgress,
 } from '@mui/material';
 import DashboardLayout from '@/components/DashboardLayout';
-import { getInboxById } from '@/lib/inboxes';
-import { notFound } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useOrganizations } from '@/hooks/useOrganizations';
+import { useInboxes } from '@/hooks/useInboxes';
+import { organizationApi, Member } from '@/lib/api';
+import useSWR from 'swr';
 
-const threadsData = [
-  {
-    title: 'Issue with recent order delivery',
-    classification: 'Non-Critical',
-    classificationColor: '#2196f3',
-    duration: '12 days',
-    assignedTo: 'John Doe',
-    status: 'Waiting',
-  },
-  {
-    title: 'Issue with recent order delivery',
-    classification: 'Critical',
-    classificationColor: '#f44336',
-    duration: '12 days',
-    assignedTo: 'Alicia Bathtub',
-    status: 'Ready',
-  },
-  {
-    title: 'Issue with recent order delivery',
-    classification: 'Non-Critical',
-    classificationColor: '#2196f3',
-    duration: '12 days',
-    assignedTo: 'Alicia Bathtub',
-    status: 'Ready',
-  },
-  {
-    title: 'Issue with recent order delivery',
-    classification: 'Non-Critical',
-    classificationColor: '#2196f3',
-    duration: '12 days',
-    assignedTo: 'Alicia Bathtub',
-    status: 'Ready',
-  },
-  {
-    title: 'Issue with recent order delivery',
-    classification: 'Non-Critical',
-    classificationColor: '#2196f3',
-    duration: '12 days',
-    assignedTo: 'Alicia Bathtub',
-    status: 'Ready',
-  },
-  {
-    title: 'Issue with recent order delivery',
-    classification: 'Non-Critical',
-    classificationColor: '#2196f3',
-    duration: '12 days',
-    assignedTo: 'Alicia Bathtub',
-    status: 'Ready',
-  },
-];
+export default function InboxPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const { user, token } = useAuth();
+  const { currentOrg } = useOrganizations();
 
-export default function InboxPage({ params }: { params: { id: string } }) {
-  const inbox = getInboxById(params.id);
+  const { data: members, isLoading: isLoadingMembers } = useSWR<Member[]>(
+    currentOrg && token ? ['members', currentOrg.id, token] : null,
+    ([_, orgId, token]) => organizationApi.listMembers(orgId, token),
+    { revalidateOnFocus: false }
+  );
+
+  const currentUserRole = members?.find(m => m.user_id === user?.id)?.role;
+
+  const { inboxes, isLoading: isLoadingInboxes } = useInboxes({ userId: user?.id, userRole: currentUserRole });
+  const inbox = inboxes.find(i => i.id === id);
+
+  if (isLoadingMembers || isLoadingInboxes) {
+    return (
+      <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      </DashboardLayout>
+    );
+  }
 
   if (!inbox) {
-    notFound();
+    return (
+      <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
+        <Typography variant="h5" sx={{ color: 'text.secondary' }}>
+          You do not have access to this inbox.
+        </Typography>
+      </DashboardLayout>
+    );
   }
 
   return (
-    <DashboardLayout>
-      <Typography variant="h4" sx={{ mb: 4, color: 'white', fontWeight: 400 }}>
-        {inbox.name} Threads
+    <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
+      <Typography variant="h4" sx={{ mb: 4, color: 'white' }}>
+        {inbox.name}
       </Typography>
 
       <TableContainer sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
@@ -91,24 +73,11 @@ export default function InboxPage({ params }: { params: { id: string } }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {threadsData.map((thread, index) => (
-              <TableRow key={index} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
-                <TableCell sx={{ color: 'white' }}>{thread.title}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={thread.classification}
-                    sx={{
-                      bgcolor: thread.classificationColor,
-                      color: 'white',
-                      fontWeight: 600,
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ color: 'white' }}>{thread.duration}</TableCell>
-                <TableCell sx={{ color: 'white' }}>{thread.assignedTo}</TableCell>
-                <TableCell sx={{ color: 'white' }}>{thread.status}</TableCell>
-              </TableRow>
-            ))}
+            <TableRow>
+              <TableCell colSpan={5} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+                No threads yet.
+              </TableCell>
+            </TableRow>
           </TableBody>
         </Table>
       </TableContainer>

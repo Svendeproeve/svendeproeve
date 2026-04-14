@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   Box,
   Drawer,
@@ -12,10 +13,12 @@ import {
   IconButton,
   Collapse,
 } from '@mui/material';
-import { IoSpeedometer, IoMail, IoSettings, IoExtensionPuzzle, IoPeople, IoLogOut, IoChevronUp, IoChevronDown } from 'react-icons/io5';
+import { IoSpeedometerOutline, IoMailOutline, IoPeopleOutline, IoLogOutOutline, IoChevronUp, IoChevronDown, IoAddCircleOutline, IoServerOutline } from 'react-icons/io5';
 import { IconType } from 'react-icons';
 import Link from 'next/link';
-import { inboxes } from '@/lib/inboxes';
+import { getInboxColor } from '@/lib/inboxes';
+import { useAuth } from '@/hooks/useAuth';
+import { useInboxes } from '@/hooks/useInboxes';
 
 const drawerWidth = 220;
 
@@ -30,47 +33,70 @@ interface MenuItem {
   icon: IconType;
   href?: string;
   submenu?: SubMenuItem[];
+  requiresAdmin?: boolean;
 }
 
-const menuItems: MenuItem[] = [
+const staticMenuItems: MenuItem[] = [
   {
     label: 'Dashboard',
-    icon: IoSpeedometer,
+    icon: IoSpeedometerOutline,
     href: '/dashboard',
   },
-  {
-    label: 'Inboxes',
-    icon: IoMail,
-    submenu: inboxes.map(inbox => ({
-      label: inbox.name,
-      href: `/inbox/${inbox.id}`,
-      color: inbox.color,
-    })),
+{
+    label: 'Mail Accounts',
+    icon: IoServerOutline,
+    href: '/mail-account-management',
+    requiresAdmin: true,
   },
   {
-    label: 'AI Settings',
-    icon: IoSettings,
-    href: '/ai-settings',
-  },
-  {
-    label: 'Integration Settings',
-    icon: IoExtensionPuzzle,
-    href: '/integration-settings',
+    label: 'Manage Categories',
+    icon: IoAddCircleOutline,
+    href: '/inbox-management',
+    requiresAdmin: true,
   },
   {
     label: 'User Management',
-    icon: IoPeople,
+    icon: IoPeopleOutline,
     href: '/user-management',
+    requiresAdmin: true,
   },
 ];
 
 interface DashboardLayoutProps {
   children: ReactNode;
   userName?: string;
+  userRole?: 'owner' | 'admin' | 'member';
 }
 
-export default function DashboardLayout({ children, userName = 'John Doe' }: DashboardLayoutProps) {
-  const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({});
+export default function DashboardLayout({ children, userName, userRole }: DashboardLayoutProps) {
+  const pathname = usePathname();
+  const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({ Categories: true });
+  const { signout, user } = useAuth();
+  const { inboxes, currentOrg } = useInboxes({ userId: user?.id, userRole });
+
+  const inboxMenuItem: MenuItem = {
+    label: 'Categories',
+    icon: IoMailOutline,
+    submenu: inboxes.map((inbox, i) => ({
+      label: inbox.name,
+      href: `/inbox/${inbox.id}`,
+      color: inbox.color || getInboxColor(i),
+    })),
+  };
+
+  const menuItems: MenuItem[] = [
+    staticMenuItems[0], // Dashboard
+    inboxMenuItem,
+    ...staticMenuItems.slice(1),
+  ];
+
+  // Filter menu items based on user role
+  const visibleMenuItems = menuItems.filter(item => {
+    if (item.requiresAdmin && userRole === 'member') {
+      return false;
+    }
+    return true;
+  });
 
   const toggleMenu = (label: string) => {
     setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
@@ -88,20 +114,23 @@ export default function DashboardLayout({ children, userName = 'John Doe' }: Das
             boxSizing: 'border-box',
             bgcolor: '#222222',
             borderRight: 'none',
+            overflow: 'hidden',
           },
         }}
       >
         <Box sx={{ p: 2 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
-            IT Factory
+            {currentOrg?.name || ''}
           </Typography>
         </Box>
 
         <List sx={{ px: 1 }}>
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const hasSubmenu = !!item.submenu;
             const isOpen = openMenus[item.label] || false;
+
+            const isActive = !hasSubmenu && item.href === pathname;
 
             return (
               <Box key={item.label}>
@@ -113,8 +142,9 @@ export default function DashboardLayout({ children, userName = 'John Doe' }: Das
                     color: 'white',
                     borderRadius: 1,
                     mb: 0.5,
-                    cursor: hasSubmenu ? 'pointer' : 'default',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+                    cursor: 'pointer',
+                    bgcolor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    '&:hover': { bgcolor: isActive ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)' },
                   }}
                 >
                   <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
@@ -127,24 +157,36 @@ export default function DashboardLayout({ children, userName = 'John Doe' }: Das
                 {hasSubmenu && (
                   <Collapse in={isOpen} timeout="auto" unmountOnExit>
                     <List component="div" disablePadding>
-                      {item.submenu!.map((subItem) => (
-                        <ListItem
-                          key={subItem.label}
-                          component={Link}
-                          href={subItem.href}
-                          sx={{
-                            pl: 4,
-                            color: 'white',
-                            borderRadius: 1,
-                            borderLeft: `3px solid ${subItem.color}`,
-                            ml: 2,
-                            mb: 0.5,
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
-                          }}
-                        >
-                          <ListItemText primary={subItem.label} />
-                        </ListItem>
-                      ))}
+                      {item.submenu!.map((subItem) => {
+                        const isSubActive = pathname === subItem.href;
+                        return (
+                          <ListItem
+                            key={subItem.label}
+                            component={Link}
+                            href={subItem.href}
+                            sx={{
+                              pl: '56px',
+                              pr: 1,
+                              py: 0.75,
+                              color: isSubActive ? 'white' : 'rgba(255,255,255,0.55)',
+                              borderLeft: `3px solid ${subItem.color}`,
+                              mb: 0.25,
+                              background: isSubActive
+                                ? `linear-gradient(to right, ${subItem.color}18, transparent)`
+                                : 'transparent',
+                              '&:hover': {
+                                background: `linear-gradient(to right, ${subItem.color}12, transparent)`,
+                                color: 'white',
+                              },
+                            }}
+                          >
+                            <ListItemText
+                              primary={subItem.label}
+                              primaryTypographyProps={{ fontSize: '0.875rem' }}
+                            />
+                          </ListItem>
+                        );
+                      })}
                     </List>
                   </Collapse>
                 )}
@@ -152,6 +194,22 @@ export default function DashboardLayout({ children, userName = 'John Doe' }: Das
             );
           })}
         </List>
+
+        <Box sx={{ mt: 'auto', p: 2 }}>
+          <Link href="/onboarding" style={{ textDecoration: 'none' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'rgba(255,255,255,0.25)',
+                fontSize: '0.7rem',
+                cursor: 'pointer',
+                '&:hover': { color: 'rgba(255,255,255,0.45)' },
+              }}
+            >
+              + Create or select organization
+            </Typography>
+          </Link>
+        </Box>
       </Drawer>
 
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
@@ -166,16 +224,23 @@ export default function DashboardLayout({ children, userName = 'John Doe' }: Das
           }}
         >
           <Box sx={{ flexGrow: 1, textAlign: 'center' }}>
-            <Typography variant="h5" sx={{ fontFamily: 'Georgia, serif', color: 'white' }}>
+            <Typography variant="h5" sx={{ fontFamily: 'var(--font-inria-serif), serif', color: 'white', fontWeight: 700, letterSpacing: '-0.15em', fontSize: '3rem' }}>
               Sortr
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              (Admin) {userName}
-            </Typography>
-            <IconButton size="small" sx={{ color: 'white' }}>
-              <IoLogOut size={20} />
+            {userName && (
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {userName}
+              </Typography>
+            )}
+            <IconButton
+              size="small"
+              sx={{ color: 'white' }}
+              onClick={signout}
+              data-testid="logout-button"
+            >
+              <IoLogOutOutline size={20} />
             </IconButton>
           </Box>
         </Box>

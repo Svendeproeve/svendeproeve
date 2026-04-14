@@ -147,11 +147,20 @@ frontend/
 
 ## 🧪 Test
 
-* Enhedstest af backend-logik
-* Integrationstest af IMAP/SMTP
-* Test af rollebaseret adgang
-* Manuel test af brugerflows
-* Validering af AI-klassificering
+Playwright E2E tests. Backend starts automatically.
+
+**Prerequisites:** Docker, Python deps (`cd backend && pip install -r requirements.txt`)
+
+```bash
+cd frontend
+npm run test:setup    # Start MongoDB
+npm test              # Run tests
+npm run test:teardown # Stop MongoDB
+```
+
+**Modes:** `npm test` (headless), `npm run test:headed` (visible), `npm run test:ui` (interactive)
+
+See `frontend/TESTING.md` for details. Tests run on PRs via GitHub Actions.
 
 ---
 

@@ -1,9 +1,61 @@
 'use client';
 
-import { Box, TextField, Button, Typography, Link } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Box, TextField, Button, Typography, Link, Alert } from '@mui/material';
 import NextLink from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const { signup, isAuthenticated, isLoading: authLoading } = useAuth();
+
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [justSignedUp, setJustSignedUp] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && !justSignedUp) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, authLoading, justSignedUp, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!fullName || !email || !password || !confirmPassword) {
+      setError('All fields are required');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      setJustSignedUp(true);
+      await signup({ full_name: fullName, email, password });
+      router.push('/onboarding');
+    } catch (err: any) {
+      setError(err.message || 'Signup failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -17,9 +69,10 @@ export default function RegisterPage() {
     >
       <Typography
         variant="h1"
+        data-testid="register-title"
         sx={{
           fontSize: '4rem',
-          fontWeight: 400,
+          
           mb: 8,
           color: 'white',
         }}
@@ -28,11 +81,38 @@ export default function RegisterPage() {
       </Typography>
 
       <Box
+        component="form"
+        onSubmit={handleSubmit}
         sx={{
           width: '100%',
           maxWidth: 300,
         }}
       >
+        {error && (
+          <Alert severity="error" data-testid="register-error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        <Typography
+          variant="body1"
+          sx={{ mb: 1, color: 'white', fontWeight: 500 }}
+        >
+          Full Name
+        </Typography>
+        <TextField
+          fullWidth
+          type="text"
+          placeholder="John Doe"
+          variant="outlined"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          disabled={isLoading}
+          required
+          inputProps={{ 'data-testid': 'register-fullname-input' }}
+          sx={{ mb: 2 }}
+        />
+
         <Typography
           variant="body1"
           sx={{ mb: 1, color: 'white', fontWeight: 500 }}
@@ -41,8 +121,13 @@ export default function RegisterPage() {
         </Typography>
         <TextField
           fullWidth
+          type="email"
           placeholder="you@example.com"
           variant="outlined"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={isLoading}
+          inputProps={{ 'data-testid': 'register-email-input' }}
           sx={{ mb: 2 }}
         />
 
@@ -57,6 +142,10 @@ export default function RegisterPage() {
           type="password"
           placeholder="••••••••••••••••"
           variant="outlined"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={isLoading}
+          inputProps={{ 'data-testid': 'register-password-input' }}
           sx={{ mb: 2 }}
         />
 
@@ -71,12 +160,19 @@ export default function RegisterPage() {
           type="password"
           placeholder="••••••••••••••••"
           variant="outlined"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          disabled={isLoading}
+          inputProps={{ 'data-testid': 'register-confirm-password-input' }}
           sx={{ mb: 2 }}
         />
 
         <Button
           fullWidth
+          type="submit"
           variant="contained"
+          disabled={isLoading}
+          data-testid="register-submit-button"
           sx={{
             py: 1.5,
             fontSize: '1.1rem',
@@ -84,7 +180,7 @@ export default function RegisterPage() {
             textTransform: 'none',
           }}
         >
-          Register
+          {isLoading ? 'Creating account...' : 'Register'}
         </Button>
 
         <Box sx={{ mt: 2, textAlign: 'center' }}>

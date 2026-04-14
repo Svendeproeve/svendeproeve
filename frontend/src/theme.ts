@@ -31,25 +31,14 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    h1: {
-      fontFamily: 'Georgia, serif',
-    },
-    h2: {
-      fontFamily: 'Georgia, serif',
-    },
-    h3: {
-      fontFamily: 'Georgia, serif',
-    },
-    h4: {
-      fontFamily: 'Georgia, serif',
-    },
-    h5: {
-      fontFamily: 'Georgia, serif',
-    },
-    h6: {
-      fontFamily: 'Georgia, serif',
-    },
+    fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontWeightRegular: 600,
+    h1: { fontWeight: 600 },
+    h2: { fontWeight: 600 },
+    h3: { fontWeight: 600 },
+    h4: { fontWeight: 600 },
+    h5: { fontWeight: 600 },
+    h6: { fontWeight: 600 },
   },
   components: {
     MuiButton: {
