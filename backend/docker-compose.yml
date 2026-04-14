@@ -4,7 +4,8 @@ services:
     container_name: sortr-mongo
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      # Use a non-default host port to avoid clashing with a local Windows mongod service.
+      - "27018:27017"
     volumes:
       - mongo_data:/data/db
 
@@ -24,6 +25,25 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app/app
+
+  poller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sortr-imap-poller
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MONGODB_URI=mongodb://mongo:27017
+      - MONGODB_DB=sortr
+      - IMAP_POLL_INTERVAL_SECONDS=15
+      - IMAP_ONLY_UNSEEN=1
+      - IMAP_LIMIT=50
+      - IMAP_MAILBOX=INBOX
+      - IMAP_MARK_SEEN=1
+    command: ["python", "-u", "-m", "app.imap_poller"]
 
 volumes:
   mongo_data:

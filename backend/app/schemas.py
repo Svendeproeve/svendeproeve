@@ -217,3 +217,35 @@ class FilterOut(BaseModel):
 
 class MemberCategoryAccessUpdateRequest(BaseModel):
     category_ids: list[str] = Field(default_factory=list)
+
+
+class EmailIngestItem(BaseModel):
+    from_: str = Field(alias="from")
+    to: str = ""
+    date: str = ""
+    subject: str = ""
+    body: str = ""
+    message_id: str = ""
+    in_reply_to: list[str] = Field(default_factory=list)
+    references: list[str] = Field(default_factory=list)
+    mailbox: str | None = None
+
+
+class EmailIngestRequest(BaseModel):
+    emails: list[EmailIngestItem] = Field(default_factory=list)
+
+
+class EmailIngestResult(BaseModel):
+    inserted: int
+    skipped: int
+
+
+ThreadCaseStatus = Literal["open", "closed"]
+
+
+class ThreadCaseOut(BaseModel):
+    org_id: str
+    thread_id: str
+    status: ThreadCaseStatus
+    updated_at: datetime
+    closed_at: Optional[datetime] = None
