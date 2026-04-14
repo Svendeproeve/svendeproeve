@@ -2,15 +2,23 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
+import os
 from typing import Any
 
 from fastapi import APIRouter, Depends
 from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError
 
-from app.db import emails_collection, thread_cases_collection
+from app.categorize import pick_category_id
+from app.db import categories_collection, emails_collection, thread_cases_collection
 from app.dependencies import get_current_user, require_org_membership
-from app.schemas import EmailIngestRequest, EmailIngestResult, ThreadCaseOut
+from app.schemas import (
+    CategorizeEmailsRequest,
+    CategorizeEmailsResult,
+    EmailIngestRequest,
+    EmailIngestResult,
+    ThreadCaseOut,
+)
 
 router = APIRouter(prefix="/organizations/{org_id}/emails", tags=["emails"])
 
@@ -164,6 +172,7 @@ def ingest_emails(
                         "thread_id": tid,
                         "case_status": "open",
                         "case_updated_at": now,
+                        "category_id": None,
                         "from": (item.get("from") or "").strip(),
                         "to": (item.get("to") or "").strip(),
                         "date": (item.get("date") or "").strip(),
@@ -197,4 +206,83 @@ def ingest_emails(
         if tid:
             _reopen_thread_case(org_id, tid, now=now)
     return EmailIngestResult(inserted=inserted, skipped=skipped)
+
+
+@router.post("/categorize", response_model=CategorizeEmailsResult)
+def categorize_emails(
+    org_id: str,
+    payload: CategorizeEmailsRequest,
+    current_user: dict = Depends(get_current_user),
+) -> CategorizeEmailsResult:
+    require_org_membership(org_id, str(current_user["_id"]))
+
+    # Load categories for org (including system uncategorised)
+    cats = list(categories_collection.find({"org_id": org_id}))
+    unc = next((c for c in cats if c.get("is_system") and c.get("name") == "Uncategorised"), None)
+    if not unc:
+        now = datetime.now(timezone.utc)
+        result = categories_collection.insert_one(
+            {
+                "org_id": org_id,
+                "name": "Uncategorised",
+                "description": "Fallback category for emails that do not match any category.",
+                "color": None,
+                "mail_account_ids": None,
+                "is_system": True,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+        unc = categories_collection.find_one({"_id": result.inserted_id})
+        cats.append(unc)
+
+    unc_id = str(unc["_id"])
+    categories = [
+        {
+            "id": str(c["_id"]),
+            "name": c.get("name", ""),
+            "description": c.get("description"),
+            "is_system": bool(c.get("is_system", False)),
+        }
+        for c in cats
+    ]
+
+    query: dict[str, Any] = {"org_id": org_id, "case_status": "open"}
+    if not payload.force:
+        query["$or"] = [{"category_id": None}, {"category_id": {"$exists": False}}, {"category_id": unc_id}]
+
+    emails = list(emails_collection.find(query).sort("created_at", -1).limit(payload.limit))
+    processed = 0
+    categorized = 0
+    uncategorised = 0
+    skipped = 0
+
+    for e in emails:
+        processed += 1
+        if not payload.force and e.get("category_id") not in (None, unc_id) and e.get("category_id") is not None:
+            skipped += 1
+            continue
+
+        cid = pick_category_id(
+            model=os.environ.get("OPENAI_MODEL", "o4-mini"),
+            categories=categories,
+            uncategorised_category_id=unc_id,
+            email=e,
+        )
+        now = datetime.now(timezone.utc)
+        emails_collection.update_one(
+            {"_id": e["_id"]},
+            {"$set": {"category_id": cid, "categorized_at": now, "categorization_model": os.environ.get("OPENAI_MODEL", "o4-mini")}},
+        )
+        if cid == unc_id:
+            uncategorised += 1
+        else:
+            categorized += 1
+
+    return CategorizeEmailsResult(
+        processed=processed,
+        categorized=categorized,
+        uncategorised=uncategorised,
+        skipped=skipped,
+    )
 

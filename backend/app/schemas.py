@@ -249,3 +249,15 @@ class ThreadCaseOut(BaseModel):
     status: ThreadCaseStatus
     updated_at: datetime
     closed_at: Optional[datetime] = None
+
+
+class CategorizeEmailsRequest(BaseModel):
+    limit: int = Field(default=50, ge=1, le=500)
+    force: bool = False
+
+
+class CategorizeEmailsResult(BaseModel):
+    processed: int
+    categorized: int
+    uncategorised: int
+    skipped: int

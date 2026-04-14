@@ -35,6 +35,7 @@ emails_collection = db["emails"]
 emails_collection.create_index([("org_id", 1), ("dedupe_key", 1)], unique=True)
 emails_collection.create_index([("org_id", 1), ("thread_id", 1)])
 emails_collection.create_index([("org_id", 1), ("created_at", 1)])
+emails_collection.create_index([("org_id", 1), ("category_id", 1)])
 
 # Thread case status (open/closed) per thread_id
 thread_cases_collection = db["thread_cases"]

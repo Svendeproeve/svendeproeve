@@ -13,6 +13,7 @@ from pymongo import MongoClient, UpdateOne
 from pymongo.collection import Collection
 from pymongo.errors import BulkWriteError
 
+from app.categorize import pick_category_id
 from app.email_parse_min import extract_email
 
 
@@ -156,6 +157,7 @@ def poll_mail_account_once(
 
     emails: Collection = db["emails"]
     thread_cases: Collection = db["thread_cases"]
+    categories: Collection = db["categories"]
 
     imap = _imap_connect(account)
     try:
@@ -168,10 +170,9 @@ def poll_mail_account_once(
             return {"ok": False, "org_id": org_id, "mail_account_id": mail_account_id, "error": f"search {typ} {data}"}
 
         ids = (data[0] or b"").split()
-        if not ids:
-            return {"ok": True, "org_id": org_id, "mail_account_id": mail_account_id, "mode": "unseen" if only_unseen else "all", "fetched": 0, "inserted": 0, "skipped": 0}
+        # Even when there are no new messages, we may still have uncategorized emails to process.
 
-        ids = ids[-limit:]
+        ids = ids[-limit:] if ids else []
         batch: list[dict[str, Any]] = []
         for msg_id in ids:
             typ, msg_data = imap.fetch(msg_id, "(RFC822)")
@@ -190,6 +191,40 @@ def poll_mail_account_once(
                 mailbox=mailbox,
                 extracted_batch=batch,
             )
+
+        # Categorize pending emails for this org (only open cases, only uncategorised/empty)
+        if os.environ.get("OPENAI_API_KEY"):
+            unc = categories.find_one({"org_id": org_id, "is_system": True, "name": "Uncategorised"})
+            if unc:
+                unc_id = str(unc["_id"])
+                cats = list(categories.find({"org_id": org_id}))
+                cat_payload = [
+                    {"id": str(c["_id"]), "name": c.get("name", ""), "description": c.get("description"), "is_system": bool(c.get("is_system", False))}
+                    for c in cats
+                ]
+                pending = list(
+                    emails.find(
+                        {
+                            "org_id": org_id,
+                            "case_status": "open",
+                            "$or": [{"category_id": None}, {"category_id": {"$exists": False}}, {"category_id": unc_id}],
+                        }
+                    )
+                    .sort("created_at", -1)
+                    .limit(25)
+                )
+                for e in pending:
+                    cid = pick_category_id(
+                        model=os.environ.get("OPENAI_MODEL", "o4-mini"),
+                        categories=cat_payload,
+                        uncategorised_category_id=unc_id,
+                        email=e,
+                    )
+                    now = datetime.now(timezone.utc)
+                    emails.update_one(
+                        {"_id": e["_id"]},
+                        {"$set": {"category_id": cid, "categorized_at": now, "categorization_model": os.environ.get("OPENAI_MODEL", "o4-mini")}},
+                    )
 
         if mark_seen and ids:
             for msg_id in ids:

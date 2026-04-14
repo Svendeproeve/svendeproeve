@@ -34,6 +34,7 @@ services:
     restart: unless-stopped
     depends_on:
       - mongo
+    env_file: ./.env.local
     environment:
       - PYTHONUNBUFFERED=1
       - MONGODB_URI=mongodb://mongo:27017
@@ -43,6 +44,7 @@ services:
       - IMAP_LIMIT=50
       - IMAP_MAILBOX=INBOX
       - IMAP_MARK_SEEN=1
+      - OPENAI_MODEL=o4-mini
     command: ["python", "-u", "-m", "app.imap_poller"]
 
 volumes:
