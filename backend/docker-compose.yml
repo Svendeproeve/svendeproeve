@@ -45,6 +45,9 @@ services:
       - IMAP_MAILBOX=INBOX
       - IMAP_MARK_SEEN=1
       - OPENAI_MODEL=o4-mini
+      # IMPORTANT: keep this off by default to avoid repeated model calls.
+      # Enable only when you want automatic categorization on new emails.
+      - OPENAI_AUTOCATEGORIZE=0
     command: ["python", "-u", "-m", "app.imap_poller"]
 
 volumes:

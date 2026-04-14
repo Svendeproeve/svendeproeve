@@ -192,8 +192,10 @@ def poll_mail_account_once(
                 extracted_batch=batch,
             )
 
-        # Categorize pending emails for this org (only open cases, only uncategorised/empty)
-        if os.environ.get("OPENAI_API_KEY"):
+        # Categorize only when enabled, and avoid re-processing the same emails every cycle.
+        # Default behavior: only categorize when new emails were inserted this cycle.
+        autocat = os.environ.get("OPENAI_AUTOCATEGORIZE", "0") == "1"
+        if autocat and inserted > 0 and os.environ.get("OPENAI_API_KEY"):
             unc = categories.find_one({"org_id": org_id, "is_system": True, "name": "Uncategorised"})
             if unc:
                 unc_id = str(unc["_id"])
@@ -207,12 +209,15 @@ def poll_mail_account_once(
                         {
                             "org_id": org_id,
                             "case_status": "open",
-                            "$or": [{"category_id": None}, {"category_id": {"$exists": False}}, {"category_id": unc_id}],
+                            # Only categorize emails that have never been categorized.
+                            "$or": [{"category_id": None}, {"category_id": {"$exists": False}}],
+                            "categorized_at": {"$exists": False},
                         }
                     )
                     .sort("created_at", -1)
                     .limit(25)
                 )
+                categorized_n = 0
                 for e in pending:
                     cid = pick_category_id(
                         model=os.environ.get("OPENAI_MODEL", "o4-mini"),
@@ -224,6 +229,12 @@ def poll_mail_account_once(
                     emails.update_one(
                         {"_id": e["_id"]},
                         {"$set": {"category_id": cid, "categorized_at": now, "categorization_model": os.environ.get("OPENAI_MODEL", "o4-mini")}},
+                    )
+                    categorized_n += 1
+                if categorized_n:
+                    print(
+                        f"poller: org={org_id} mail_account={mail_account_id} categorized={categorized_n}",
+                        flush=True,
                     )
 
         if mark_seen and ids:
