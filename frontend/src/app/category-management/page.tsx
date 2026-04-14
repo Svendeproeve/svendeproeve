@@ -31,18 +31,18 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
-import { useInboxes } from '@/hooks/useInboxes';
-import { inboxApi, mailAccountApi, InboxCreateData, InboxUpdateData, Inbox, MailAccount, organizationApi, Member } from '@/lib/api';
+import { useCategories } from '@/hooks/useCategories';
+import { categoryApi, mailAccountApi, CategoryCreateData, CategoryUpdateData, Category, MailAccount, organizationApi, Member } from '@/lib/api';
 import useSWR from 'swr';
 
-const DEFAULT_FORM: InboxCreateData = { name: '', description: '', color: undefined };
+const DEFAULT_FORM: CategoryCreateData = { name: '', description: '', color: undefined };
 
-export default function InboxManagementPage() {
+export default function CategoryManagementPage() {
   const router = useRouter();
   const { isAuthenticated, user, token, isLoading: isLoadingAuth } = useAuth();
   const { organizations, currentOrg, isLoading: isLoadingOrgs } = useOrganizations();
 
-  const { inboxes, isLoading: isLoadingInboxes, mutate } = useInboxes();
+  const { categories, isLoading: isLoadingCategories, mutate } = useCategories();
 
   const { data: mailAccounts } = useSWR<MailAccount[]>(
     currentOrg && token ? ['mail-accounts', currentOrg.id, token] : null,
@@ -58,19 +58,19 @@ export default function InboxManagementPage() {
 
   const currentUserRole = members?.find(m => m.user_id === user?.id)?.role;
 
-  const [form, setForm] = useState<InboxCreateData>(DEFAULT_FORM);
+  const [form, setForm] = useState<CategoryCreateData>(DEFAULT_FORM);
   const [selectedMailAccountIds, setSelectedMailAccountIds] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [editInbox, setEditInbox] = useState<Inbox | null>(null);
-  const [editForm, setEditForm] = useState<InboxUpdateData>({});
+  const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [editForm, setEditForm] = useState<CategoryUpdateData>({});
   const [editSelectedMailAccountIds, setEditSelectedMailAccountIds] = useState<string[]>([]);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [editError, setEditError] = useState('');
 
-  const [deleteTarget, setDeleteTarget] = useState<Inbox | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -91,7 +91,7 @@ export default function InboxManagementPage() {
     if (!currentOrg || !token) return;
     setIsSubmitting(true);
     try {
-      await inboxApi.create(currentOrg.id, {
+      await categoryApi.create(currentOrg.id, {
         name: form.name,
         description: form.description || undefined,
         color: form.color || undefined,
@@ -108,25 +108,25 @@ export default function InboxManagementPage() {
     }
   };
 
-  const openEdit = (inbox: Inbox) => {
-    setEditInbox(inbox);
-    setEditForm({ name: inbox.name, description: inbox.description || '', color: inbox.color });
-    setEditSelectedMailAccountIds(inbox.mail_account_ids ?? []);
+  const openEdit = (category: Category) => {
+    setEditCategory(category);
+    setEditForm({ name: category.name, description: category.description || '', color: category.color });
+    setEditSelectedMailAccountIds(category.mail_account_ids ?? []);
     setEditError('');
   };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editInbox || !currentOrg || !token) return;
+    if (!editCategory || !currentOrg || !token) return;
     setIsEditSubmitting(true);
     setEditError('');
     try {
-      await inboxApi.update(currentOrg.id, editInbox.id, {
+      await categoryApi.update(currentOrg.id, editCategory.id, {
         ...editForm,
         mail_account_ids: editSelectedMailAccountIds,
       }, token);
       await mutate();
-      setEditInbox(null);
+      setEditCategory(null);
     } catch (err: any) {
       setEditError(err.message || 'Failed to update category');
     } finally {
@@ -138,7 +138,7 @@ export default function InboxManagementPage() {
     if (!deleteTarget || !currentOrg || !token) return;
     setIsDeleting(true);
     try {
-      await inboxApi.delete(currentOrg.id, deleteTarget.id, token);
+      await categoryApi.delete(currentOrg.id, deleteTarget.id, token);
       await mutate();
       setDeleteTarget(null);
     } catch (err: any) {
@@ -269,7 +269,7 @@ export default function InboxManagementPage() {
 
       <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>Existing Categories</Typography>
 
-      {isLoadingInboxes ? (
+      {isLoadingCategories ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
       ) : (
         <TableContainer sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
@@ -284,36 +284,36 @@ export default function InboxManagementPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {inboxes.length > 0 ? inboxes.map(inbox => (
-                <TableRow key={inbox.id} data-testid={`category-row-${inbox.id}`} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
+              {categories.length > 0 ? categories.map(category => (
+                <TableRow key={category.id} data-testid={`category-row-${category.id}`} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
                   <TableCell sx={{ color: 'white' }}>
-                    {inbox.name}
-                    {inbox.is_system && (
+                    {category.name}
+                    {category.is_system && (
                       <Chip label="system" size="small" sx={{ ml: 1, bgcolor: '#444', color: 'text.secondary', fontSize: '0.65rem' }} />
                     )}
                   </TableCell>
                   <TableCell>
-                    {inbox.color ? (
-                      <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: inbox.color, border: '1px solid rgba(255,255,255,0.15)' }} />
+                    {category.color ? (
+                      <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: category.color, border: '1px solid rgba(255,255,255,0.15)' }} />
                     ) : (
                       <Typography variant="body2" sx={{ color: '#555' }}>—</Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>{inbox.description || '—'}</TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>{category.description || '—'}</TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>
-                    {inbox.mail_account_ids && inbox.mail_account_ids.length > 0
-                      ? inbox.mail_account_ids.map(id => mailAccounts?.find(ma => ma.id === id)?.name || id).join(', ')
+                    {category.mail_account_ids && category.mail_account_ids.length > 0
+                      ? category.mail_account_ids.map(id => mailAccounts?.find(ma => ma.id === id)?.name || id).join(', ')
                       : 'All'}
                   </TableCell>
                   <TableCell>
-                    {inbox.is_system ? (
+                    {category.is_system ? (
                       <IoLockClosed size={16} color="#555" />
                     ) : (
                       <>
-                        <IconButton size="small" sx={{ color: 'text.secondary' }} data-testid={`category-edit-${inbox.id}`} onClick={() => openEdit(inbox)}>
+                        <IconButton size="small" sx={{ color: 'text.secondary' }} data-testid={`category-edit-${category.id}`} onClick={() => openEdit(category)}>
                           <IoPencil size={18} />
                         </IconButton>
-                        <IconButton size="small" sx={{ color: '#f44336' }} data-testid={`category-delete-${inbox.id}`} onClick={() => setDeleteTarget(inbox)}>
+                        <IconButton size="small" sx={{ color: '#f44336' }} data-testid={`category-delete-${category.id}`} onClick={() => setDeleteTarget(category)}>
                           <IoTrash size={18} />
                         </IconButton>
                       </>
@@ -333,7 +333,7 @@ export default function InboxManagementPage() {
       )}
 
       {/* Edit Dialog */}
-      <Dialog open={!!editInbox} onClose={() => setEditInbox(null)} maxWidth="sm" fullWidth>
+      <Dialog open={!!editCategory} onClose={() => setEditCategory(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Category</DialogTitle>
         <DialogContent>
           {editError && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{editError}</Alert>}
@@ -390,7 +390,7 @@ export default function InboxManagementPage() {
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setEditInbox(null)} disabled={isEditSubmitting}>Cancel</Button>
+          <Button onClick={() => setEditCategory(null)} disabled={isEditSubmitting}>Cancel</Button>
           <Button type="submit" form="edit-form" variant="contained" disabled={isEditSubmitting} data-testid="category-edit-save">
             {isEditSubmitting ? 'Saving...' : 'Save'}
           </Button>

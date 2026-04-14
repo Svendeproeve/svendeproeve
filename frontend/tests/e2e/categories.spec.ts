@@ -5,7 +5,7 @@ test.describe("Category Management", () => {
   test.beforeEach(async ({ page }) => {
     const user = generateTestUser("categories");
     await completeOnboarding(page, user);
-    await page.goto("/inbox-management");
+    await page.goto("/category-management");
   });
 
   test("should create a new category", async ({ page }) => {

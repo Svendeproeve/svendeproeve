@@ -1,6 +1,6 @@
 import { API_BASE_URL } from '../swr-config';
 
-export interface Inbox {
+export interface Category {
   id: string;
   org_id: string;
   name: string;
@@ -12,30 +12,45 @@ export interface Inbox {
   updated_at: string;
 }
 
-export interface InboxCreateData {
+export interface CategoryCreateData {
   name: string;
   description?: string;
   color?: string;
   mail_account_ids?: string[];
 }
 
-export interface InboxUpdateData {
+export interface CategoryUpdateData {
   name?: string;
   description?: string;
   color?: string;
   mail_account_ids?: string[];
 }
 
-export const inboxApi = {
-  list: async (orgId: string, token: string): Promise<Inbox[]> => {
+export interface Email {
+  id: string;
+  org_id: string;
+  sender: string;
+  to: string;
+  date: string;
+  subject: string;
+  body: string;
+  message_id: string;
+  thread_id: string;
+  category_id: string | null;
+  case_status: string;
+  created_at: string;
+}
+
+export const categoryApi = {
+  list: async (orgId: string, token: string): Promise<Category[]> => {
     const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/categories`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error('Failed to fetch inboxes');
+    if (!res.ok) throw new Error('Failed to fetch categories');
     return res.json();
   },
 
-  create: async (orgId: string, data: InboxCreateData, token: string): Promise<Inbox> => {
+  create: async (orgId: string, data: CategoryCreateData, token: string): Promise<Category> => {
     const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/categories`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -43,32 +58,32 @@ export const inboxApi = {
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.detail || 'Failed to create inbox');
+      throw new Error(error.detail || 'Failed to create category');
     }
     return res.json();
   },
 
-  update: async (orgId: string, inboxId: string, data: InboxUpdateData, token: string): Promise<Inbox> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/categories/${inboxId}`, {
+  update: async (orgId: string, categoryId: string, data: CategoryUpdateData, token: string): Promise<Category> => {
+    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/categories/${categoryId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.detail || 'Failed to update inbox');
+      throw new Error(error.detail || 'Failed to update category');
     }
     return res.json();
   },
 
-  delete: async (orgId: string, inboxId: string, token: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/categories/${inboxId}`, {
+  delete: async (orgId: string, categoryId: string, token: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/categories/${categoryId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.detail || 'Failed to delete inbox');
+      throw new Error(error.detail || 'Failed to delete category');
     }
   },
 
@@ -76,20 +91,28 @@ export const inboxApi = {
     const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/categories/members/${memberUserId}/access`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error('Failed to fetch member inbox access');
+    if (!res.ok) throw new Error('Failed to fetch member category access');
     const data = await res.json();
     return data.category_ids;
   },
 
-  setMemberAccess: async (orgId: string, memberUserId: string, inboxIds: string[], token: string): Promise<void> => {
+  setMemberAccess: async (orgId: string, memberUserId: string, categoryIds: string[], token: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/categories/members/${memberUserId}/access`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ category_ids: inboxIds }),
+      body: JSON.stringify({ category_ids: categoryIds }),
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.detail || 'Failed to update inbox access');
+      throw new Error(error.detail || 'Failed to update category access');
     }
+  },
+
+  listEmails: async (orgId: string, categoryId: string, token: string): Promise<Email[]> => {
+    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/emails?category_id=${encodeURIComponent(categoryId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch emails');
+    return res.json();
   },
 };

@@ -16,9 +16,9 @@ import {
 import { IoSpeedometerOutline, IoMailOutline, IoPeopleOutline, IoLogOutOutline, IoChevronUp, IoChevronDown, IoAddCircleOutline, IoServerOutline } from 'react-icons/io5';
 import { IconType } from 'react-icons';
 import Link from 'next/link';
-import { getInboxColor } from '@/lib/inboxes';
+import { getCategoryColor } from '@/lib/categories';
 import { useAuth } from '@/hooks/useAuth';
-import { useInboxes } from '@/hooks/useInboxes';
+import { useCategories } from '@/hooks/useCategories';
 
 const drawerWidth = 220;
 
@@ -51,7 +51,7 @@ const staticMenuItems: MenuItem[] = [
   {
     label: 'Manage Categories',
     icon: IoAddCircleOutline,
-    href: '/inbox-management',
+    href: '/category-management',
     requiresAdmin: true,
   },
   {
@@ -72,21 +72,21 @@ export default function DashboardLayout({ children, userName, userRole }: Dashbo
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({ Categories: true });
   const { signout, user } = useAuth();
-  const { inboxes, currentOrg } = useInboxes({ userId: user?.id, userRole });
+  const { categories, currentOrg } = useCategories({ userId: user?.id, userRole });
 
-  const inboxMenuItem: MenuItem = {
+  const categoryMenuItem: MenuItem = {
     label: 'Categories',
     icon: IoMailOutline,
-    submenu: inboxes.map((inbox, i) => ({
-      label: inbox.name,
-      href: `/inbox/${inbox.id}`,
-      color: inbox.color || getInboxColor(i),
+    submenu: categories.map((category, i) => ({
+      label: category.name,
+      href: `/categories/${category.id}`,
+      color: category.color || getCategoryColor(i),
     })),
   };
 
   const menuItems: MenuItem[] = [
     staticMenuItems[0], // Dashboard
-    inboxMenuItem,
+    categoryMenuItem,
     ...staticMenuItems.slice(1),
   ];
 

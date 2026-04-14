@@ -61,7 +61,7 @@ export default function DashboardPage() {
           <TableHead>
             <TableRow>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Title</TableCell>
-              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Inbox</TableCell>
+              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Category</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Classification</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Duration</TableCell>
             </TableRow>

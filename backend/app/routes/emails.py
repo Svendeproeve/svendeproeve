@@ -3,20 +3,26 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import os
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError
 
 from app.categorize import pick_category_id
-from app.db import categories_collection, emails_collection, thread_cases_collection
+from app.db import (
+    categories_collection,
+    emails_collection,
+    member_category_access_collection,
+    thread_cases_collection,
+)
 from app.dependencies import get_current_user, require_org_membership
 from app.schemas import (
     CategorizeEmailsRequest,
     CategorizeEmailsResult,
     EmailIngestRequest,
     EmailIngestResult,
+    EmailOut,
     ThreadCaseOut,
 )
 
@@ -142,6 +148,45 @@ def open_thread_case(
         updated_at=doc.get("updated_at", now),
         closed_at=doc.get("closed_at"),
     )
+
+
+def _to_email_out(doc: dict) -> EmailOut:
+    return EmailOut(
+        id=str(doc["_id"]),
+        org_id=doc["org_id"],
+        sender=doc.get("from", ""),
+        to=doc.get("to", ""),
+        date=doc.get("date", ""),
+        subject=doc.get("subject", ""),
+        body=doc.get("body", ""),
+        message_id=doc.get("message_id", ""),
+        thread_id=doc.get("thread_id", ""),
+        category_id=doc.get("category_id"),
+        case_status=doc.get("case_status", "open"),
+        created_at=doc["created_at"],
+    )
+
+
+@router.get("", response_model=list[EmailOut])
+def list_emails(
+    org_id: str,
+    category_id: Optional[str] = Query(default=None),
+    current_user: dict = Depends(get_current_user),
+) -> list[EmailOut]:
+    membership = require_org_membership(org_id, str(current_user["_id"]))
+
+    query: dict[str, Any] = {"org_id": org_id}
+    if category_id:
+        if membership["role"] == "member":
+            access = member_category_access_collection.find_one(
+                {"org_id": org_id, "user_id": str(current_user["_id"]), "category_id": category_id}
+            )
+            if not access:
+                raise HTTPException(status_code=403, detail="No access to this category")
+        query["category_id"] = category_id
+
+    docs = list(emails_collection.find(query).sort("created_at", -1).limit(200))
+    return [_to_email_out(d) for d in docs]
 
 
 @router.post("/ingest", response_model=EmailIngestResult)

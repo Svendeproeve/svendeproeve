@@ -261,3 +261,18 @@ class CategorizeEmailsResult(BaseModel):
     categorized: int
     uncategorised: int
     skipped: int
+
+
+class EmailOut(BaseModel):
+    id: str
+    org_id: str
+    sender: str
+    to: str
+    date: str
+    subject: str
+    body: str
+    message_id: str
+    thread_id: str
+    category_id: Optional[str] = None
+    case_status: str
+    created_at: datetime

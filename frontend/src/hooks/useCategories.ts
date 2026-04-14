@@ -3,46 +3,45 @@
 import useSWR from 'swr';
 import { useAuth } from './useAuth';
 import { useOrganizations } from './useOrganizations';
-import { inboxApi, Inbox } from '@/lib/api';
+import { categoryApi, Category } from '@/lib/api';
 
-interface UseInboxesOptions {
+interface UseCategoriesOptions {
   userId?: string;
   userRole?: 'owner' | 'admin' | 'member';
 }
 
-export function useInboxes(options: UseInboxesOptions = {}) {
+export function useCategories(options: UseCategoriesOptions = {}) {
   const { userId, userRole } = options;
   const { token, isAuthenticated } = useAuth();
   const { currentOrg } = useOrganizations();
 
-  const { data: allInboxes, error, isLoading, mutate } = useSWR<Inbox[]>(
-    isAuthenticated && token && currentOrg ? ['inboxes', currentOrg.id, token] : null,
-    ([, orgId, tok]: [string, string, string]) => inboxApi.list(orgId, tok),
+  const { data: allCategories, error, isLoading, mutate } = useSWR<Category[]>(
+    isAuthenticated && token && currentOrg ? ['categories', currentOrg.id, token] : null,
+    ([, orgId, tok]: [string, string, string]) => categoryApi.list(orgId, tok),
     { revalidateOnFocus: false, revalidateOnReconnect: true }
   );
 
-  // Fetch access list only for regular members
   const isMember = userRole === 'member';
   const { data: accessIds, isLoading: isLoadingAccess } = useSWR<string[]>(
     isMember && isAuthenticated && token && currentOrg && userId
-      ? ['inbox-access', currentOrg.id, userId, token]
+      ? ['category-access', currentOrg.id, userId, token]
       : null,
     ([, orgId, uid, tok]: [string, string, string, string]) =>
-      inboxApi.getMemberAccess(orgId, uid, tok),
+      categoryApi.getMemberAccess(orgId, uid, tok),
     { revalidateOnFocus: false, revalidateOnReconnect: true }
   );
 
-  const inboxes = (() => {
-    if (!allInboxes) return [];
+  const categories = (() => {
+    if (!allCategories) return [];
     if (isMember) {
       if (isLoadingAccess || accessIds === undefined) return [];
-      return allInboxes.filter(inbox => accessIds.includes(inbox.id));
+      return allCategories.filter(category => accessIds.includes(category.id));
     }
-    return allInboxes;
+    return allCategories;
   })();
 
   return {
-    inboxes,
+    categories,
     currentOrg,
     isLoading: isLoading || (isMember && isLoadingAccess),
     error,

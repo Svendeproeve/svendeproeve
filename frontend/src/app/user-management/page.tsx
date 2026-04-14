@@ -35,15 +35,15 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
-import { useInboxes } from '@/hooks/useInboxes';
-import { organizationApi, Member, InviteMemberData, inboxApi } from '@/lib/api';
+import { useCategories } from '@/hooks/useCategories';
+import { organizationApi, Member, InviteMemberData, categoryApi } from '@/lib/api';
 import useSWR from 'swr';
 
 export default function UserManagementPage() {
   const router = useRouter();
   const { isAuthenticated, user, token } = useAuth();
   const { organizations, currentOrg, isLoading: isLoadingOrgs } = useOrganizations();
-  const { inboxes } = useInboxes();
+  const { categories } = useCategories();
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'member'>('member');
@@ -52,7 +52,7 @@ export default function UserManagementPage() {
   const [isInviting, setIsInviting] = useState(false);
 
   const [accessMember, setAccessMember] = useState<Member | null>(null);
-  const [selectedInboxIds, setSelectedInboxIds] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
   const [isSavingAccess, setIsSavingAccess] = useState(false);
   const [accessError, setAccessError] = useState('');
@@ -113,18 +113,18 @@ export default function UserManagementPage() {
     setAccessError('');
     setIsLoadingAccess(true);
     try {
-      const ids = await inboxApi.getMemberAccess(currentOrg.id, member.user_id, token);
-      setSelectedInboxIds(ids);
+      const ids = await categoryApi.getMemberAccess(currentOrg.id, member.user_id, token);
+      setSelectedCategoryIds(ids);
     } catch {
-      setSelectedInboxIds([]);
+      setSelectedCategoryIds([]);
     } finally {
       setIsLoadingAccess(false);
     }
   };
 
-  const toggleInbox = (inboxId: string) => {
-    setSelectedInboxIds(prev =>
-      prev.includes(inboxId) ? prev.filter(id => id !== inboxId) : [...prev, inboxId]
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategoryIds(prev =>
+      prev.includes(categoryId) ? prev.filter(id => id !== categoryId) : [...prev, categoryId]
     );
   };
 
@@ -133,7 +133,7 @@ export default function UserManagementPage() {
     setIsSavingAccess(true);
     setAccessError('');
     try {
-      await inboxApi.setMemberAccess(currentOrg.id, accessMember.user_id, selectedInboxIds, token);
+      await categoryApi.setMemberAccess(currentOrg.id, accessMember.user_id, selectedCategoryIds, token);
       setAccessMember(null);
     } catch (err: any) {
       setAccessError(err.message || 'Failed to update access');
@@ -233,7 +233,7 @@ export default function UserManagementPage() {
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Email</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Role</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Joined</TableCell>
-              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Inbox Access</TableCell>
+              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Category Access</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -257,7 +257,7 @@ export default function UserManagementPage() {
                         size="small"
                         sx={{ color: 'text.secondary' }}
                         onClick={() => openAccessDialog(member)}
-                        title="Manage inbox access"
+                        title="Manage category access"
                       >
                         <IoKey size={18} />
                       </IconButton>
@@ -276,10 +276,10 @@ export default function UserManagementPage() {
         </Table>
       </TableContainer>
 
-      {/* Inbox Access Dialog */}
+      {/* Category Access Dialog */}
       <Dialog open={!!accessMember} onClose={() => setAccessMember(null)} maxWidth="xs" fullWidth>
         <DialogTitle>
-          Inbox Access — {accessMember?.user_full_name || accessMember?.user_email}
+          Category Access — {accessMember?.user_full_name || accessMember?.user_email}
         </DialogTitle>
         <DialogContent>
           {accessError && <Alert severity="error" sx={{ mb: 2 }}>{accessError}</Alert>}
@@ -287,23 +287,23 @@ export default function UserManagementPage() {
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
               <CircularProgress size={24} />
             </Box>
-          ) : inboxes.length === 0 ? (
+          ) : categories.length === 0 ? (
             <Typography variant="body2" sx={{ color: 'text.secondary', py: 1 }}>
-              No inboxes available. Create inboxes first.
+              No categories available. Create categories first.
             </Typography>
           ) : (
             <FormGroup sx={{ mt: 1 }}>
-              {inboxes.map(inbox => (
+              {categories.map(category => (
                 <FormControlLabel
-                  key={inbox.id}
+                  key={category.id}
                   control={
                     <Checkbox
-                      checked={selectedInboxIds.includes(inbox.id)}
-                      onChange={() => toggleInbox(inbox.id)}
+                      checked={selectedCategoryIds.includes(category.id)}
+                      onChange={() => toggleCategory(category.id)}
                       disabled={isSavingAccess}
                     />
                   }
-                  label={inbox.name}
+                  label={category.name}
                 />
               ))}
             </FormGroup>
@@ -314,7 +314,7 @@ export default function UserManagementPage() {
           <Button
             variant="contained"
             onClick={handleSaveAccess}
-            disabled={isSavingAccess || isLoadingAccess || inboxes.length === 0}
+            disabled={isSavingAccess || isLoadingAccess || categories.length === 0}
           >
             {isSavingAccess ? 'Saving...' : 'Save'}
           </Button>
