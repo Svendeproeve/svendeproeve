@@ -252,7 +252,11 @@ export default function UserManagementPage() {
                     {new Date(member.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    {member.role !== 'owner' && (
+                    {member.role === 'owner' ? (
+                      <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 220 }}>
+                        Owner has access to all categories
+                      </Typography>
+                    ) : (
                       <IconButton
                         size="small"
                         sx={{ color: 'text.secondary' }}
