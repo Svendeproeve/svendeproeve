@@ -31,9 +31,8 @@ export async function completeOnboarding(page: Page, user: TestUser): Promise<vo
   await page.getByTestId('show-create-org-button').click();
   await page.getByTestId('onboarding-org-name-input').fill(orgName);
   await page.getByTestId('onboarding-create-org-button').click();
-  await expect(page.getByText('Your Organizations')).toBeVisible({ timeout: 10000 });
-  await page.getByText(orgName).click();
   await expect(page).toHaveURL('/dashboard', { timeout: 15000 });
+  await expect(page.getByTestId('dashboard-greeting')).toBeVisible({ timeout: 10000 });
 }
 
 export async function logout(page: Page): Promise<void> {
