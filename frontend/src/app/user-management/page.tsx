@@ -92,6 +92,12 @@ export default function UserManagementPage() {
       return;
     }
 
+    const normalized = email.trim().toLowerCase();
+    if (members?.some(m => m.user_email.toLowerCase() === normalized)) {
+      setError('That user is already a member of this organization');
+      return;
+    }
+
     setIsInviting(true);
     try {
       const data: InviteMemberData = { email: email.toLowerCase(), role };

@@ -110,12 +110,9 @@ def invite_existing_user(
         {"org_id": org_id, "user_id": str(user["_id"])}
     )
     if existing:
-        return MembershipOut(
-            user_id=existing["user_id"],
-            user_email=user["email"],
-            user_full_name=user.get("full_name"),
-            role=existing["role"],
-            created_at=existing["created_at"],
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User is already a member of this organization",
         )
 
     membership = {
