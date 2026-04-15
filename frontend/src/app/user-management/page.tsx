@@ -92,6 +92,12 @@ export default function UserManagementPage() {
       return;
     }
 
+    const normalized = email.trim().toLowerCase();
+    if (members?.some(m => m.user_email.toLowerCase() === normalized)) {
+      setError('That user is already a member of this organization');
+      return;
+    }
+
     setIsInviting(true);
     try {
       const data: InviteMemberData = { email: email.toLowerCase(), role };
@@ -252,7 +258,11 @@ export default function UserManagementPage() {
                     {new Date(member.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    {member.role !== 'owner' && (
+                    {member.role === 'owner' ? (
+                      <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 220 }}>
+                        Owner has access to all categories
+                      </Typography>
+                    ) : (
                       <IconButton
                         size="small"
                         sx={{ color: 'text.secondary' }}

@@ -52,10 +52,12 @@ export default function OnboardingPage() {
     setIsLoading(true);
 
     try {
-      await organizationApi.create({ name: orgName }, token);
+      const created = await organizationApi.create({ name: orgName }, token);
+      setStoredOrgId(created.id);
       await mutate();
       setOrgName('');
       setShowCreateForm(false);
+      router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to create organization');
     } finally {

@@ -289,7 +289,7 @@ export default function CategoryManagementPage() {
                   <TableCell sx={{ color: 'white' }}>
                     {category.name}
                     {category.is_system && (
-                      <Chip label="system" size="small" sx={{ ml: 1, bgcolor: '#444', color: 'text.secondary', fontSize: '0.65rem' }} />
+                      <Chip label="System" size="small" sx={{ ml: 1, bgcolor: '#444', color: 'text.secondary', fontSize: '0.65rem' }} />
                     )}
                   </TableCell>
                   <TableCell>

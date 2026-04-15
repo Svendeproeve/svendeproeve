@@ -23,13 +23,10 @@ test("complete user journey: sign up, onboard, log out, log in", async ({
 
   await expect(page).toHaveURL("/onboarding", { timeout: 15000 });
 
-  // — Onboarding: create org and select it —
+  // — Onboarding: create org (auto-selected) → dashboard —
   await page.getByTestId("show-create-org-button").click();
   await page.getByTestId("onboarding-org-name-input").fill(user.orgName!);
   await page.getByTestId("onboarding-create-org-button").click();
-
-  await expect(page.getByText("Your Organizations")).toBeVisible({ timeout: 10000 });
-  await page.getByText(user.orgName!).click();
 
   await expect(page).toHaveURL("/dashboard", { timeout: 15000 });
   await expect(page.getByTestId("dashboard-greeting")).toBeVisible();

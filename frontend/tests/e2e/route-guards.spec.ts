@@ -23,12 +23,10 @@ test.describe("Route Guards", () => {
     await page.getByTestId("onboarding-org-name-input").fill(testUser.orgName!);
     await page.getByTestId("onboarding-create-org-button").click();
 
-    await expect(page.getByText("Your Organizations")).toBeVisible({
+    await expect(page).toHaveURL("/dashboard", { timeout: 15000 });
+    await expect(page.getByTestId("dashboard-greeting")).toBeVisible({
       timeout: 10000,
     });
-
-    await page.getByText(testUser.orgName!).click();
-    await expect(page).toHaveURL("/dashboard", { timeout: 10000 });
   });
 
   test("should redirect authenticated user from landing to dashboard", async ({

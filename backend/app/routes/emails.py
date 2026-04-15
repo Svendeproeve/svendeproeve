@@ -10,6 +10,7 @@ from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError
 
 from app.categorize import pick_category_id
+from app.email_threading import inherited_category_id, is_reply_message, set_thread_category
 from app.db import (
     categories_collection,
     emails_collection,
@@ -27,6 +28,10 @@ from app.schemas import (
 )
 
 router = APIRouter(prefix="/organizations/{org_id}/emails", tags=["emails"])
+
+
+def _uncategorised_category_doc(org_id: str) -> Optional[dict[str, Any]]:
+    return categories_collection.find_one({"org_id": org_id, "is_system": True, "name": "Uncategorised"})
 
 
 def _dedupe_key(org_id: str, email: dict[str, Any]) -> str:
@@ -183,10 +188,48 @@ def list_emails(
             )
             if not access:
                 raise HTTPException(status_code=403, detail="No access to this category")
-        query["category_id"] = category_id
+        unc = _uncategorised_category_doc(org_id)
+        if unc is not None and str(unc["_id"]) == category_id:
+            unc_id_str = str(unc["_id"])
+            query["$or"] = [
+                {"category_id": None},
+                {"category_id": {"$exists": False}},
+                {"category_id": unc_id_str},
+            ]
+        else:
+            query["category_id"] = category_id
 
     docs = list(emails_collection.find(query).sort("created_at", -1).limit(200))
     return [_to_email_out(d) for d in docs]
+
+
+@router.get("/uncategorized-count")
+def get_uncategorized_count(
+    org_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> dict[str, int]:
+    """Count open-case emails with no category, missing category, or system Uncategorised."""
+    membership = require_org_membership(org_id, str(current_user["_id"]))
+    unc = _uncategorised_category_doc(org_id)
+    if not unc:
+        return {"count": 0}
+    unc_id_str = str(unc["_id"])
+    if membership["role"] == "member":
+        access = member_category_access_collection.find_one(
+            {"org_id": org_id, "user_id": str(current_user["_id"]), "category_id": unc_id_str}
+        )
+        if not access:
+            raise HTTPException(status_code=403, detail="No access to this category")
+    q: dict[str, Any] = {
+        "org_id": org_id,
+        "case_status": "open",
+        "$or": [
+            {"category_id": None},
+            {"category_id": {"$exists": False}},
+            {"category_id": unc_id_str},
+        ],
+    }
+    return {"count": emails_collection.count_documents(q)}
 
 
 @router.post("/ingest", response_model=EmailIngestResult)
@@ -301,23 +344,45 @@ def categorize_emails(
     categorized = 0
     uncategorised = 0
     skipped = 0
+    seen_thread_keys: set[str] = set()
 
+    model = os.environ.get("OPENAI_MODEL", "o4-mini")
     for e in emails:
         processed += 1
         if not payload.force and e.get("category_id") not in (None, unc_id) and e.get("category_id") is not None:
             skipped += 1
             continue
 
-        cid = pick_category_id(
-            model=os.environ.get("OPENAI_MODEL", "o4-mini"),
-            categories=categories,
-            uncategorised_category_id=unc_id,
-            email=e,
-        )
+        thread_id = (e.get("thread_id") or "").strip()
+        thread_key = thread_id or str(e["_id"])
+        if thread_key in seen_thread_keys:
+            skipped += 1
+            continue
+        seen_thread_keys.add(thread_key)
         now = datetime.now(timezone.utc)
-        emails_collection.update_one(
-            {"_id": e["_id"]},
-            {"$set": {"category_id": cid, "categorized_at": now, "categorization_model": os.environ.get("OPENAI_MODEL", "o4-mini")}},
+        if is_reply_message(e):
+            cid = inherited_category_id(
+                emails_collection,
+                org_id,
+                thread_id,
+                unc_id,
+                exclude_email_id=e["_id"],
+            )
+        else:
+            cid = pick_category_id(
+                model=model,
+                categories=categories,
+                uncategorised_category_id=unc_id,
+                email=e,
+            )
+        set_thread_category(
+            emails_collection,
+            org_id,
+            thread_id,
+            e["_id"],
+            cid,
+            now,
+            model,
         )
         if cid == unc_id:
             uncategorised += 1

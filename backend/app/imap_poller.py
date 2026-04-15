@@ -15,6 +15,7 @@ from pymongo.errors import BulkWriteError
 
 from app.categorize import pick_category_id
 from app.email_parse_min import extract_email
+from app.email_threading import inherited_category_id, is_reply_message, set_thread_category
 
 
 def _dedupe_key(email: dict[str, Any]) -> str:
@@ -217,18 +218,43 @@ def poll_mail_account_once(
                     .sort("created_at", -1)
                     .limit(25)
                 )
-                categorized_n = 0
+                # One pass per thread: set_thread_category updates all messages with that thread_id.
+                pending_by_thread: dict[str, dict[str, Any]] = {}
                 for e in pending:
-                    cid = pick_category_id(
-                        model=os.environ.get("OPENAI_MODEL", "o4-mini"),
-                        categories=cat_payload,
-                        uncategorised_category_id=unc_id,
-                        email=e,
-                    )
+                    tid = (e.get("thread_id") or "").strip()
+                    thread_key = tid or str(e["_id"])
+                    if thread_key not in pending_by_thread:
+                        pending_by_thread[thread_key] = e
+                pending = list(pending_by_thread.values())
+
+                categorized_n = 0
+                model = os.environ.get("OPENAI_MODEL", "o4-mini")
+                for e in pending:
                     now = datetime.now(timezone.utc)
-                    emails.update_one(
-                        {"_id": e["_id"]},
-                        {"$set": {"category_id": cid, "categorized_at": now, "categorization_model": os.environ.get("OPENAI_MODEL", "o4-mini")}},
+                    thread_id = (e.get("thread_id") or "").strip()
+                    if is_reply_message(e):
+                        cid = inherited_category_id(
+                            emails,
+                            org_id,
+                            thread_id,
+                            unc_id,
+                            exclude_email_id=e["_id"],
+                        )
+                    else:
+                        cid = pick_category_id(
+                            model=model,
+                            categories=cat_payload,
+                            uncategorised_category_id=unc_id,
+                            email=e,
+                        )
+                    set_thread_category(
+                        emails,
+                        org_id,
+                        thread_id,
+                        e["_id"],
+                        cid,
+                        now,
+                        model,
                     )
                     categorized_n += 1
                 if categorized_n:
