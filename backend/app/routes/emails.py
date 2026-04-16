@@ -34,6 +34,7 @@ from app.schemas import (
     ThreadAssignRequest,
     ThreadCaseOut,
     ThreadCategoryUpdateRequest,
+    ThreadStatusUpdateRequest,
 )
 
 router = APIRouter(prefix="/organizations/{org_id}/emails", tags=["emails"])
@@ -139,11 +140,13 @@ def get_thread_case(
     current_user: dict = Depends(get_current_user),
 ) -> ThreadCaseOut:
     require_org_membership(org_id, str(current_user["_id"]))
-    doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": thread_id})
+    canonical_tid, _ = _resolve_canonical_thread(org_id, thread_id)
+    tid = canonical_tid or thread_id
+    doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": tid})
     if not doc:
         now = datetime.now(timezone.utc)
-        return ThreadCaseOut(org_id=org_id, thread_id=thread_id, status="open", updated_at=now, closed_at=None)
-    return _build_thread_case_out(org_id, thread_id, doc)
+        return ThreadCaseOut(org_id=org_id, thread_id=tid, status="open", updated_at=now, closed_at=None)
+    return _build_thread_case_out(org_id, tid, doc)
 
 
 @router.post("/threads/{thread_id}/close", response_model=ThreadCaseOut)
@@ -153,8 +156,10 @@ def close_thread_case(
     current_user: dict = Depends(get_current_user),
 ) -> ThreadCaseOut:
     require_org_membership(org_id, str(current_user["_id"]))
+    canonical_tid, _ = _resolve_canonical_thread(org_id, thread_id)
+    tid = canonical_tid or thread_id
     now = datetime.now(timezone.utc)
-    return _close_thread_case(org_id, thread_id, now=now)
+    return _close_thread_case(org_id, tid, now=now)
 
 
 @router.post("/threads/{thread_id}/open", response_model=ThreadCaseOut)
@@ -164,10 +169,41 @@ def open_thread_case(
     current_user: dict = Depends(get_current_user),
 ) -> ThreadCaseOut:
     require_org_membership(org_id, str(current_user["_id"]))
+    canonical_tid, _ = _resolve_canonical_thread(org_id, thread_id)
+    tid = canonical_tid or thread_id
     now = datetime.now(timezone.utc)
-    _reopen_thread_case(org_id, thread_id, now=now)
-    doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": thread_id}) or {}
-    return _build_thread_case_out(org_id, thread_id, doc)
+    _reopen_thread_case(org_id, tid, now=now)
+    doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": tid}) or {}
+    return _build_thread_case_out(org_id, tid, doc)
+
+
+@router.patch("/threads/{thread_id}/status", response_model=ThreadCaseOut)
+def update_thread_status(
+    org_id: str,
+    thread_id: str,
+    payload: ThreadStatusUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+) -> ThreadCaseOut:
+    require_org_membership(org_id, str(current_user["_id"]))
+    canonical_tid, thread_filter = _resolve_canonical_thread(org_id, thread_id)
+    if not thread_filter:
+        raise HTTPException(status_code=404, detail="No emails found for this thread")
+    now = datetime.now(timezone.utc)
+    updates: dict[str, Any] = {"status": payload.status, "updated_at": now}
+    email_updates: dict[str, Any] = {"$set": {"case_status": payload.status, "case_updated_at": now}}
+    if payload.status == "closed":
+        updates["closed_at"] = now
+        email_updates["$set"]["case_closed_at"] = now
+    else:
+        email_updates["$unset"] = {"case_closed_at": ""}
+    thread_cases_collection.update_one(
+        {"org_id": org_id, "thread_id": canonical_tid},
+        {"$set": updates} if payload.status == "closed" else {"$set": updates, "$unset": {"closed_at": ""}},
+        upsert=True,
+    )
+    emails_collection.update_many(thread_filter, email_updates)
+    doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": canonical_tid}) or {}
+    return _build_thread_case_out(org_id, canonical_tid, doc)
 
 
 @router.patch("/threads/{thread_id}/assign", response_model=ThreadCaseOut)
@@ -178,33 +214,41 @@ def assign_thread(
     current_user: dict = Depends(get_current_user),
 ) -> ThreadCaseOut:
     require_org_membership(org_id, str(current_user["_id"]))
+    canonical_tid, _ = _resolve_canonical_thread(org_id, thread_id)
+    tid = canonical_tid or thread_id
     now = datetime.now(timezone.utc)
     if payload.assigned_to is not None:
         mem = memberships_collection.find_one({"org_id": org_id, "user_id": payload.assigned_to})
         if not mem:
             raise HTTPException(status_code=400, detail="User is not a member of this organization")
     thread_cases_collection.update_one(
-        {"org_id": org_id, "thread_id": thread_id},
+        {"org_id": org_id, "thread_id": tid},
         {"$set": {"assigned_to": payload.assigned_to, "updated_at": now}},
         upsert=True,
     )
-    doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": thread_id}) or {}
-    return _build_thread_case_out(org_id, thread_id, doc)
+    doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": tid}) or {}
+    return _build_thread_case_out(org_id, tid, doc)
 
 
-def _resolve_canonical_thread(org_id: str, thread_id: str) -> dict[str, Any]:
-    """Find the filter to match all emails in a thread, resolving the canonical thread_id."""
+def _resolve_canonical_thread(org_id: str, thread_id: str) -> tuple[str, dict[str, Any]]:
+    """Resolve the canonical thread_id and email filter for a thread.
+
+    Returns (canonical_thread_id, email_filter).
+    canonical_thread_id is the actual thread_id stored on email documents.
+    email_filter is a Mongo query dict to match all emails in the thread.
+    Returns ("", {}) if no emails found.
+    """
     tk = thread_id.strip()
     or_clauses: list[dict[str, Any]] = [{"thread_id": tk}]
     if ObjectId.is_valid(tk):
         or_clauses.append({"_id": ObjectId(tk)})
     anchor = emails_collection.find_one({"org_id": org_id, "$or": or_clauses})
     if not anchor:
-        return {}
+        return "", {}
     canonical = (anchor.get("thread_id") or "").strip()
     if canonical:
-        return {"org_id": org_id, "thread_id": canonical}
-    return {"org_id": org_id, "_id": anchor["_id"]}
+        return canonical, {"org_id": org_id, "thread_id": canonical}
+    return str(anchor["_id"]), {"org_id": org_id, "_id": anchor["_id"]}
 
 
 @router.patch("/threads/{thread_id}/category")
@@ -219,7 +263,7 @@ def update_thread_category(
     cat = categories_collection.find_one({"_id": cat_oid, "org_id": org_id})
     if not cat:
         raise HTTPException(status_code=404, detail="Category not found")
-    thread_filter = _resolve_canonical_thread(org_id, thread_id)
+    canonical_tid, thread_filter = _resolve_canonical_thread(org_id, thread_id)
     if not thread_filter:
         raise HTTPException(status_code=404, detail="No emails found for this thread")
     now = datetime.now(timezone.utc)

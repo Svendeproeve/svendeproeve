@@ -26,7 +26,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useCategories } from '@/hooks/useCategories';
 import { organizationApi, emailsApi, categoryApi, Member, Email } from '@/lib/api';
-import { CaseStatusChip, SeverityChip } from '@/lib/email-status-chips';
+
 import { stripReplyQuote } from '@/lib/strip-reply-quote';
 import { apiFetch } from '@/lib/swr-config';
 import useSWR from 'swr';
@@ -79,7 +79,7 @@ export default function ThreadPage({
   });
   const category = categories.find(c => c.id === categoryId);
 
-  const { data: emails, isLoading: isLoadingEmails } = useSWR<Email[]>(
+  const { data: emails, isLoading: isLoadingEmails, mutate: mutateEmails } = useSWR<Email[]>(
     currentOrg && token && category ? ['thread-emails', currentOrg.id, categoryId, threadId, token] : null,
     ([_, orgId, catId, tid, tok]) =>
       emailsApi.listThreadEmails(orgId as string, catId as string, tid as string, tok as string),
@@ -162,6 +162,64 @@ export default function ThreadPage({
       });
     } finally {
       setCategoryLoading(false);
+    }
+  };
+
+  const STATUS_OPTIONS = [
+    { value: 'open', label: 'Open' },
+    { value: 'closed', label: 'Closed' },
+    { value: 'waiting_for_customer', label: 'Waiting for customer' },
+  ] as const;
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [statusFeedback, setStatusFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const handleStatusChange = async (newStatus: string) => {
+    if (!currentOrg || !token || !threadId) return;
+    if (newStatus === threadSample?.case_status) return;
+    setStatusLoading(true);
+    setStatusFeedback(null);
+    try {
+      await emailsApi.updateThreadStatus(
+        currentOrg.id, threadId,
+        newStatus as 'open' | 'closed' | 'waiting_for_customer',
+        token,
+      );
+      mutateEmails();
+      mutateThreadCase();
+      const label = STATUS_OPTIONS.find(o => o.value === newStatus)?.label ?? newStatus;
+      setStatusFeedback({ type: 'success', message: `Status set to ${label}` });
+      setTimeout(() => setStatusFeedback(prev => prev?.type === 'success' ? null : prev), 3000);
+    } catch (err) {
+      setStatusFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to update status',
+      });
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  const [severityLoading, setSeverityLoading] = useState(false);
+  const [severityFeedback, setSeverityFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const handleSeverityChange = async (newSeverity: 'critical' | 'non_critical') => {
+    if (!currentOrg || !token || !threadSample) return;
+    if (newSeverity === threadSample.severity) return;
+    setSeverityLoading(true);
+    setSeverityFeedback(null);
+    try {
+      await emailsApi.patchSeverity(currentOrg.id, threadSample.id, newSeverity, token);
+      mutateEmails();
+      setSeverityFeedback({
+        type: 'success',
+        message: `Severity set to ${newSeverity === 'critical' ? 'Critical' : 'Non-Critical'}`,
+      });
+      setTimeout(() => setSeverityFeedback(prev => prev?.type === 'success' ? null : prev), 3000);
+    } catch (err) {
+      setSeverityFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to update severity',
+      });
+    } finally {
+      setSeverityLoading(false);
     }
   };
 
@@ -528,13 +586,70 @@ export default function ThreadPage({
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.25 }}>
                     Status
                   </Typography>
-                  <CaseStatusChip caseStatus={threadSample?.case_status} />
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={threadSample?.case_status ?? 'open'}
+                      onChange={e => handleStatusChange(e.target.value as string)}
+                      disabled={statusLoading}
+                      sx={{
+                        fontSize: '0.875rem',
+                        color: 'grey.100',
+                        '.MuiSelect-icon': { color: 'text.secondary' },
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+                      }}
+                    >
+                      {STATUS_OPTIONS.map(o => (
+                        <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {statusFeedback && (
+                    <Alert
+                      severity={statusFeedback.type}
+                      onClose={() => setStatusFeedback(null)}
+                      sx={{ mt: 1, py: 0, fontSize: '0.75rem' }}
+                    >
+                      {statusFeedback.message}
+                    </Alert>
+                  )}
                 </Box>
                 <Box>
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.25 }}>
                     Severity
                   </Typography>
-                  <SeverityChip severity={threadSample?.severity} />
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={threadSample?.severity ?? '__none__'}
+                      onChange={e => {
+                        const v = e.target.value as string;
+                        if (v === 'critical' || v === 'non_critical') handleSeverityChange(v);
+                      }}
+                      disabled={severityLoading}
+                      sx={{
+                        fontSize: '0.875rem',
+                        color: 'grey.100',
+                        '.MuiSelect-icon': { color: 'text.secondary' },
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+                      }}
+                    >
+                      <MenuItem value="__none__" disabled>
+                        Not set
+                      </MenuItem>
+                      <MenuItem value="critical">Critical</MenuItem>
+                      <MenuItem value="non_critical">Non-Critical</MenuItem>
+                    </Select>
+                  </FormControl>
+                  {severityFeedback && (
+                    <Alert
+                      severity={severityFeedback.type}
+                      onClose={() => setSeverityFeedback(null)}
+                      sx={{ mt: 1, py: 0, fontSize: '0.75rem' }}
+                    >
+                      {severityFeedback.message}
+                    </Alert>
+                  )}
                 </Box>
                 <Box>
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.25 }}>

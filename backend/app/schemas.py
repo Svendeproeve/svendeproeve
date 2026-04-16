@@ -240,7 +240,11 @@ class EmailIngestResult(BaseModel):
     skipped: int
 
 
-ThreadCaseStatus = Literal["open", "closed"]
+ThreadCaseStatus = Literal["open", "closed", "waiting_for_customer"]
+
+
+class ThreadStatusUpdateRequest(BaseModel):
+    status: ThreadCaseStatus
 
 
 class ThreadAssignRequest(BaseModel):

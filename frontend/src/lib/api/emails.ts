@@ -89,6 +89,27 @@ export const emailsApi = {
     return res.json();
   },
 
+  updateThreadStatus: async (
+    orgId: string,
+    threadId: string,
+    status: 'open' | 'closed' | 'waiting_for_customer',
+    token: string,
+  ): Promise<{ status: string }> => {
+    const res = await apiFetch(
+      `/organizations/${orgId}/emails/threads/${encodeURIComponent(threadId)}/status`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update thread status');
+    }
+    return res.json();
+  },
+
   assignThread: async (
     orgId: string,
     threadId: string,
