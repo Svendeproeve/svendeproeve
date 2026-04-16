@@ -88,4 +88,25 @@ export const emailsApi = {
     }
     return res.json();
   },
+
+  assignThread: async (
+    orgId: string,
+    threadId: string,
+    assignedTo: string | null,
+    token: string,
+  ): Promise<{ assigned_to: string | null; assigned_to_name: string | null }> => {
+    const res = await apiFetch(
+      `/organizations/${orgId}/emails/threads/${encodeURIComponent(threadId)}/assign`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ assigned_to: assignedTo }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to assign thread');
+    }
+    return res.json();
+  },
 };

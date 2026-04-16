@@ -17,7 +17,9 @@ from app.db import (
     emails_collection,
     mail_accounts_collection,
     member_category_access_collection,
+    memberships_collection,
     thread_cases_collection,
+    users_collection,
 )
 from app.dependencies import get_current_user, require_org_membership
 from app.utils import parse_object_id
@@ -28,6 +30,8 @@ from app.schemas import (
     EmailIngestResult,
     EmailOut,
     EmailSeverityUpdateRequest,
+    MembershipOut,
+    ThreadAssignRequest,
     ThreadCaseOut,
 )
 
@@ -89,6 +93,30 @@ def _reopen_thread_case(org_id: str, thread_id: str, *, now: datetime) -> None:
     )
 
 
+def _resolve_user_name(user_id: Optional[str]) -> Optional[str]:
+    if not user_id:
+        return None
+    if not ObjectId.is_valid(user_id):
+        return None
+    u = users_collection.find_one({"_id": ObjectId(user_id)})
+    if not u:
+        return None
+    return (u.get("full_name") or u.get("email") or "").strip() or None
+
+
+def _build_thread_case_out(org_id: str, thread_id: str, doc: dict[str, Any]) -> ThreadCaseOut:
+    assigned = doc.get("assigned_to")
+    return ThreadCaseOut(
+        org_id=org_id,
+        thread_id=thread_id,
+        status=doc.get("status", "open"),
+        updated_at=doc.get("updated_at", datetime.now(timezone.utc)),
+        closed_at=doc.get("closed_at"),
+        assigned_to=assigned,
+        assigned_to_name=_resolve_user_name(assigned),
+    )
+
+
 def _close_thread_case(org_id: str, thread_id: str, *, now: datetime) -> ThreadCaseOut:
     thread_cases_collection.update_one(
         {"org_id": org_id, "thread_id": thread_id},
@@ -100,13 +128,7 @@ def _close_thread_case(org_id: str, thread_id: str, *, now: datetime) -> ThreadC
         {"$set": {"case_status": "closed", "case_updated_at": now, "case_closed_at": now}},
     )
     doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": thread_id}) or {}
-    return ThreadCaseOut(
-        org_id=org_id,
-        thread_id=thread_id,
-        status=doc.get("status", "closed"),
-        updated_at=doc.get("updated_at", now),
-        closed_at=doc.get("closed_at"),
-    )
+    return _build_thread_case_out(org_id, thread_id, doc)
 
 
 @router.get("/threads/{thread_id}/case", response_model=ThreadCaseOut)
@@ -120,13 +142,7 @@ def get_thread_case(
     if not doc:
         now = datetime.now(timezone.utc)
         return ThreadCaseOut(org_id=org_id, thread_id=thread_id, status="open", updated_at=now, closed_at=None)
-    return ThreadCaseOut(
-        org_id=org_id,
-        thread_id=thread_id,
-        status=doc.get("status", "open"),
-        updated_at=doc.get("updated_at", datetime.now(timezone.utc)),
-        closed_at=doc.get("closed_at"),
-    )
+    return _build_thread_case_out(org_id, thread_id, doc)
 
 
 @router.post("/threads/{thread_id}/close", response_model=ThreadCaseOut)
@@ -150,13 +166,29 @@ def open_thread_case(
     now = datetime.now(timezone.utc)
     _reopen_thread_case(org_id, thread_id, now=now)
     doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": thread_id}) or {}
-    return ThreadCaseOut(
-        org_id=org_id,
-        thread_id=thread_id,
-        status=doc.get("status", "open"),
-        updated_at=doc.get("updated_at", now),
-        closed_at=doc.get("closed_at"),
+    return _build_thread_case_out(org_id, thread_id, doc)
+
+
+@router.patch("/threads/{thread_id}/assign", response_model=ThreadCaseOut)
+def assign_thread(
+    org_id: str,
+    thread_id: str,
+    payload: ThreadAssignRequest,
+    current_user: dict = Depends(get_current_user),
+) -> ThreadCaseOut:
+    require_org_membership(org_id, str(current_user["_id"]))
+    now = datetime.now(timezone.utc)
+    if payload.assigned_to is not None:
+        mem = memberships_collection.find_one({"org_id": org_id, "user_id": payload.assigned_to})
+        if not mem:
+            raise HTTPException(status_code=400, detail="User is not a member of this organization")
+    thread_cases_collection.update_one(
+        {"org_id": org_id, "thread_id": thread_id},
+        {"$set": {"assigned_to": payload.assigned_to, "updated_at": now}},
+        upsert=True,
     )
+    doc = thread_cases_collection.find_one({"org_id": org_id, "thread_id": thread_id}) or {}
+    return _build_thread_case_out(org_id, thread_id, doc)
 
 
 def _category_filter_clause(

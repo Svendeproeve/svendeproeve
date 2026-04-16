@@ -243,12 +243,21 @@ class EmailIngestResult(BaseModel):
 ThreadCaseStatus = Literal["open", "closed"]
 
 
+class ThreadAssignRequest(BaseModel):
+    assigned_to: Optional[str] = Field(
+        default=None,
+        description="user_id of the member to assign, or null to unassign.",
+    )
+
+
 class ThreadCaseOut(BaseModel):
     org_id: str
     thread_id: str
     status: ThreadCaseStatus
     updated_at: datetime
     closed_at: Optional[datetime] = None
+    assigned_to: Optional[str] = None
+    assigned_to_name: Optional[str] = None
 
 
 class CategorizeEmailsRequest(BaseModel):

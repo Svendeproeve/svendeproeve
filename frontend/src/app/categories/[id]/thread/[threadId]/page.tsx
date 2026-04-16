@@ -14,6 +14,10 @@ import {
   IconButton,
   Checkbox,
   FormControlLabel,
+  Select,
+  MenuItem,
+  FormControl,
+  Alert,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
@@ -21,9 +25,10 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useCategories } from '@/hooks/useCategories';
-import { organizationApi, emailsApi, Member, Email } from '@/lib/api';
+import { organizationApi, emailsApi, categoryApi, Member, Email } from '@/lib/api';
 import { CaseStatusChip, SeverityChip } from '@/lib/email-status-chips';
 import { stripReplyQuote } from '@/lib/strip-reply-quote';
+import { apiFetch } from '@/lib/swr-config';
 import useSWR from 'swr';
 
 function formatDateTime(raw: string): string {
@@ -62,7 +67,7 @@ export default function ThreadPage({
 
   const { data: members, isLoading: isLoadingMembers } = useSWR<Member[]>(
     currentOrg && token ? ['members', currentOrg.id, token] : null,
-    ([_, orgId, tok]) => organizationApi.listMembers(orgId, tok as string),
+    ([_, orgId, tok]) => organizationApi.listMembers(orgId as string, tok as string),
     { revalidateOnFocus: false }
   );
 
@@ -77,7 +82,7 @@ export default function ThreadPage({
   const { data: emails, isLoading: isLoadingEmails } = useSWR<Email[]>(
     currentOrg && token && category ? ['thread-emails', currentOrg.id, categoryId, threadId, token] : null,
     ([_, orgId, catId, tid, tok]) =>
-      emailsApi.listThreadEmails(orgId, catId as string, tid as string, tok as string),
+      emailsApi.listThreadEmails(orgId as string, catId as string, tid as string, tok as string),
     { revalidateOnFocus: false }
   );
 
@@ -85,6 +90,55 @@ export default function ThreadPage({
 
   /** First message in the thread; fields like status/severity are shared across the thread. */
   const threadSample = emails?.[0];
+
+  type CategoryMember = { user_id: string; user_email: string; user_full_name?: string; role: string };
+  const { data: categoryMembers } = useSWR<CategoryMember[]>(
+    currentOrg && token && category ? ['category-members', currentOrg.id, categoryId, token] : null,
+    ([_, orgId, catId, tok]) =>
+      categoryApi.listCategoryMembers(orgId as string, catId as string, tok as string),
+    { revalidateOnFocus: false },
+  );
+
+  type ThreadCase = { assigned_to: string | null; assigned_to_name: string | null };
+  const threadCaseKey = currentOrg && token && threadId
+    ? ['thread-case', currentOrg.id, threadId, token]
+    : null;
+  const { data: threadCase, mutate: mutateThreadCase } = useSWR<ThreadCase>(
+    threadCaseKey,
+    async ([_, orgId, tid, tok]) => {
+      const resp = await apiFetch(
+        `/organizations/${orgId}/emails/threads/${encodeURIComponent(tid as string)}/case`,
+        { headers: { Authorization: `Bearer ${tok as string}` } },
+      );
+      return resp.json();
+    },
+    { revalidateOnFocus: false },
+  );
+
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignFeedback, setAssignFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const handleAssign = async (userId: string | null) => {
+    if (!currentOrg || !token || !threadId) return;
+    setAssignLoading(true);
+    setAssignFeedback(null);
+    try {
+      const updated = await emailsApi.assignThread(currentOrg.id, threadId, userId, token);
+      mutateThreadCase(prev => ({ ...prev, ...updated }), false);
+      const name = updated.assigned_to_name;
+      setAssignFeedback({
+        type: 'success',
+        message: name ? `Assigned to ${name}` : 'Unassigned successfully',
+      });
+      setTimeout(() => setAssignFeedback(prev => prev?.type === 'success' ? null : prev), 3000);
+    } catch (err) {
+      setAssignFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to assign thread',
+      });
+    } finally {
+      setAssignLoading(false);
+    }
+  };
 
   const [replyBody, setReplyBody] = useState('');
   const [replyInternalNote, setReplyInternalNote] = useState(false);
@@ -325,6 +379,9 @@ export default function ThreadPage({
                     '& .MuiInputBase-input': { color: 'text.primary' },
                     '& .MuiOutlinedInput-root': {
                       bgcolor: 'action.hover',
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'divider',
+                      },
                     },
                   }}
                 />
@@ -474,9 +531,42 @@ export default function ThreadPage({
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.25 }}>
                     Assigned to
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'grey.100' }}>
-                    N/A
-                  </Typography>
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={threadCase?.assigned_to ?? '__none__'}
+                      onChange={e => {
+                        const v = e.target.value as string;
+                        handleAssign(v === '__none__' ? null : v);
+                      }}
+                      disabled={assignLoading || !categoryMembers}
+                      displayEmpty
+                      sx={{
+                        fontSize: '0.875rem',
+                        color: 'grey.100',
+                        '.MuiSelect-icon': { color: 'text.secondary' },
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+                      }}
+                    >
+                      <MenuItem value="__none__">
+                        Unassigned
+                      </MenuItem>
+                      {categoryMembers?.map(m => (
+                        <MenuItem key={m.user_id} value={m.user_id}>
+                          {m.user_full_name || m.user_email}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {assignFeedback && (
+                    <Alert
+                      severity={assignFeedback.type}
+                      onClose={() => setAssignFeedback(null)}
+                      sx={{ mt: 1, py: 0, fontSize: '0.75rem' }}
+                    >
+                      {assignFeedback.message}
+                    </Alert>
+                  )}
                 </Box>
               </Box>
             </Paper>

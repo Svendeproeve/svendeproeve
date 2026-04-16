@@ -117,6 +117,19 @@ export const categoryApi = {
     }
   },
 
+  listCategoryMembers: async (
+    orgId: string,
+    categoryId: string,
+    token: string,
+  ): Promise<{ user_id: string; user_email: string; user_full_name?: string; role: string }[]> => {
+    const res = await apiFetch(
+      `/organizations/${orgId}/categories/${encodeURIComponent(categoryId)}/members`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) throw new Error('Failed to fetch category members');
+    return res.json();
+  },
+
   listEmails: async (orgId: string, categoryId: string, token: string): Promise<Email[]> => {
     const res = await apiFetch(`/organizations/${orgId}/emails?category_id=${encodeURIComponent(categoryId)}`, {
       headers: { Authorization: `Bearer ${token}` },
