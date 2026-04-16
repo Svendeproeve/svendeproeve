@@ -18,6 +18,7 @@ import {
   MenuItem,
   FormControl,
   Alert,
+  Chip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
@@ -226,6 +227,36 @@ export default function ThreadPage({
   const [replyBody, setReplyBody] = useState('');
   const [replyInternalNote, setReplyInternalNote] = useState(false);
   const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const emailListRef = useRef<HTMLDivElement | null>(null);
+  const [replySending, setReplySending] = useState(false);
+  const [replyFeedback, setReplyFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleSendReply = async () => {
+    if (!currentOrg || !token || !threadId || !replyBody.trim()) return;
+    setReplySending(true);
+    setReplyFeedback(null);
+    try {
+      await emailsApi.replyToThread(currentOrg.id, threadId, replyBody.trim(), replyInternalNote, token);
+      setReplyBody('');
+      setReplyInternalNote(false);
+      await mutateEmails();
+      requestAnimationFrame(() => {
+        emailListRef.current?.scrollTo({ top: emailListRef.current.scrollHeight, behavior: 'smooth' });
+      });
+      setReplyFeedback({
+        type: 'success',
+        message: replyInternalNote ? 'Internal note added' : 'Reply sent successfully',
+      });
+      setTimeout(() => setReplyFeedback(prev => prev?.type === 'success' ? null : prev), 3000);
+    } catch (err) {
+      setReplyFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to send reply',
+      });
+    } finally {
+      setReplySending(false);
+    }
+  };
 
   const insertReplyEmoji = (emoji: string) => {
     const el = replyInputRef.current;
@@ -362,6 +393,7 @@ export default function ThreadPage({
               }}
             >
               <Box
+                ref={emailListRef}
                 sx={{
                   flex: { xs: 'none', lg: 1 },
                   minHeight: { xs: 'auto', lg: 0 },
@@ -374,48 +406,64 @@ export default function ThreadPage({
                 {!emails?.length ? (
                   <Typography sx={{ color: 'text.secondary' }}>No messages in this thread.</Typography>
                 ) : (
-                  emails.map(email => (
-                    <Paper
-                      key={email.id}
-                      elevation={0}
-                      sx={{
-                        bgcolor: 'background.paper',
-                        p: 2,
-                        borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Box
+                  emails.map(email => {
+                    const isOutbound = !!email.is_outbound;
+                    const isNote = !!email.is_internal_note;
+                    return (
+                      <Paper
+                        key={email.id}
+                        elevation={0}
                         sx={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          justifyContent: 'space-between',
-                          gap: 1,
-                          mb: 1.5,
+                          bgcolor: isNote
+                            ? 'rgba(255,167,38,0.08)'
+                            : 'background.paper',
+                          p: 2,
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: isNote
+                            ? 'rgba(255,167,38,0.3)'
+                            : 'divider',
+                          flexShrink: 0,
                         }}
                       >
-                        <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                          {email.sender || '—'}
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'space-between',
+                            gap: 1,
+                            mb: 1.5,
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                              {email.sender || '—'}
+                            </Typography>
+                            {isNote && (
+                              <Chip label="Internal note" size="small" sx={{ bgcolor: 'rgba(255,167,38,0.25)', color: '#ffb74d', fontSize: '0.7rem', height: 20 }} />
+                            )}
+                            {isOutbound && !isNote && (
+                              <Chip label="Sent" size="small" sx={{ bgcolor: category.color || 'grey.700', color: '#fff', fontSize: '0.7rem', height: 20 }} />
+                            )}
+                          </Box>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            {formatDateTime(email.date || email.created_at)}
+                          </Typography>
+                        </Box>
+                        <Divider sx={{ mb: 1.5, borderColor: 'rgba(255,255,255,0.08)' }} />
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'grey.100',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {stripReplyQuote(email.body || '') || '—'}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {formatDateTime(email.date || email.created_at)}
-                        </Typography>
-                      </Box>
-                      <Divider sx={{ mb: 1.5, borderColor: 'rgba(255,255,255,0.08)' }} />
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: 'grey.100',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {stripReplyQuote(email.body || '') || '—'}
-                      </Typography>
-                    </Paper>
-                  ))
+                      </Paper>
+                    );
+                  })
                 )}
               </Box>
 
@@ -536,11 +584,9 @@ export default function ThreadPage({
                       variant="contained"
                       color="primary"
                       size="medium"
-                      disabled={!replyBody.trim()}
-                      endIcon={<SendRoundedIcon sx={{ fontSize: 20 }} />}
-                      onClick={() => {
-                        /* Reply API not wired yet — pass replyInternalNote when implemented */
-                      }}
+                      disabled={!replyBody.trim() || replySending}
+                      endIcon={replySending ? <CircularProgress size={16} color="inherit" /> : <SendRoundedIcon sx={{ fontSize: 20 }} />}
+                      onClick={handleSendReply}
                       sx={{
                         minHeight: 40,
                         px: 2,
@@ -560,6 +606,15 @@ export default function ThreadPage({
                     </Button>
                   </Box>
                 </Box>
+                {replyFeedback && (
+                  <Alert
+                    severity={replyFeedback.type}
+                    sx={{ mt: 1 }}
+                    onClose={() => setReplyFeedback(null)}
+                  >
+                    {replyFeedback.message}
+                  </Alert>
+                )}
               </Paper>
             </Box>
 

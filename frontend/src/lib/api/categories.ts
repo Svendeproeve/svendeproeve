@@ -50,6 +50,8 @@ export interface Email {
   mail_account_name?: string | null;
   assigned_to?: string | null;
   assigned_to_name?: string | null;
+  is_outbound?: boolean;
+  is_internal_note?: boolean;
 }
 
 export const categoryApi = {

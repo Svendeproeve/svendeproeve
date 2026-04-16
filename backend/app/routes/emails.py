@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from email.mime.text import MIMEText
+from email.utils import formatdate, make_msgid
 import hashlib
+import imaplib
 import os
+import smtplib
 from typing import Any, Optional
+import uuid
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -34,6 +39,7 @@ from app.schemas import (
     ThreadAssignRequest,
     ThreadCaseOut,
     ThreadCategoryUpdateRequest,
+    ThreadReplyRequest,
     ThreadStatusUpdateRequest,
 )
 
@@ -387,6 +393,8 @@ def _to_email_out(
         mail_account_name=mname,
         assigned_to=assigned_to,
         assigned_to_name=assigned_to_name,
+        is_outbound=bool(doc.get("is_outbound", False)),
+        is_internal_note=bool(doc.get("is_internal_note", False)),
     )
 
 
@@ -692,4 +700,171 @@ def categorize_emails(
         uncategorised=uncategorised,
         skipped=skipped,
     )
+
+
+# ---------------------------------------------------------------------------
+# Reply helpers
+# ---------------------------------------------------------------------------
+
+def _send_reply_smtp(account: dict[str, Any], msg: MIMEText) -> None:
+    host = account["smtp_host"]
+    port = account.get("smtp_port", 465)
+    use_ssl = account.get("smtp_use_ssl", True)
+
+    if use_ssl:
+        server = smtplib.SMTP_SSL(host, port, timeout=15)
+    else:
+        server = smtplib.SMTP(host, port, timeout=15)
+    try:
+        server.ehlo()
+        if not use_ssl:
+            try:
+                server.starttls()
+                server.ehlo()
+            except Exception:
+                pass
+        server.login(account["smtp_username"], account["smtp_password"])
+        server.send_message(msg)
+        server.quit()
+    finally:
+        try:
+            server.close()
+        except Exception:
+            pass
+
+
+def _append_to_sent_imap(account: dict[str, Any], message_bytes: bytes) -> None:
+    host = account["imap_host"]
+    port = account.get("imap_port", 993)
+    use_ssl = account.get("use_ssl", True)
+
+    if use_ssl:
+        imap = imaplib.IMAP4_SSL(host, port, timeout=15)
+    else:
+        imap = imaplib.IMAP4(host, port, timeout=15)
+    try:
+        imap.login(account["imap_username"], account["imap_password"])
+        sent_folder = "Sent"
+        for candidate in ("Sent", "[Gmail]/Sent Mail", "INBOX.Sent", "Sent Items"):
+            status, _ = imap.select(candidate, readonly=True)
+            if status == "OK":
+                sent_folder = candidate
+                break
+            imap.select("INBOX", readonly=True)
+        imap.append(sent_folder, "\\Seen", None, message_bytes)
+        imap.logout()
+    finally:
+        try:
+            imap.shutdown()
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Reply endpoint
+# ---------------------------------------------------------------------------
+
+@router.post("/threads/{thread_id}/reply", response_model=EmailOut)
+def reply_to_thread(
+    org_id: str,
+    thread_id: str,
+    payload: ThreadReplyRequest,
+    current_user: dict = Depends(get_current_user),
+) -> EmailOut:
+    require_org_membership(org_id, str(current_user["_id"]))
+
+    canonical_tid, thread_filter = _resolve_canonical_thread(org_id, thread_id)
+    if not thread_filter:
+        raise HTTPException(status_code=404, detail="No emails found for this thread")
+
+    thread_emails = list(
+        emails_collection.find(thread_filter).sort("created_at", 1)
+    )
+    if not thread_emails:
+        raise HTTPException(status_code=404, detail="No emails found for this thread")
+
+    latest = thread_emails[-1]
+
+    account_id = latest.get("mail_account_id")
+    if account_id is None:
+        for e in reversed(thread_emails):
+            if e.get("mail_account_id"):
+                account_id = e["mail_account_id"]
+                break
+    if account_id is None:
+        raise HTTPException(status_code=400, detail="Cannot determine mail account for this thread")
+
+    if isinstance(account_id, str) and ObjectId.is_valid(account_id):
+        account_oid = ObjectId(account_id)
+    else:
+        account_oid = account_id
+    account = mail_accounts_collection.find_one({"_id": account_oid, "org_id": org_id})
+    if not account:
+        raise HTTPException(status_code=404, detail="Mail account not found")
+
+    now = datetime.now(timezone.utc)
+    new_message_id = make_msgid(domain=account.get("smtp_host", "localhost"))
+
+    reply_to_mid = (latest.get("message_id") or "").strip()
+    existing_refs = latest.get("references") or []
+    references = list(existing_refs)
+    if reply_to_mid and reply_to_mid not in references:
+        references.append(reply_to_mid)
+
+    from_addr = account.get("smtp_username", "")
+    latest_inbound = next(
+        (e for e in reversed(thread_emails) if not e.get("is_outbound") and not e.get("is_internal_note")),
+        None,
+    )
+    to_addr = (latest_inbound.get("from") or "").strip() if latest_inbound else ""
+    if not to_addr:
+        to_addr = (latest.get("to") or latest.get("from") or "").strip()
+
+    subject = (latest.get("subject") or "").strip()
+    if subject and not subject.lower().startswith("re:"):
+        subject = f"Re: {subject}"
+
+    if not payload.internal_note:
+        msg = MIMEText(payload.body, "plain", "utf-8")
+        msg["From"] = from_addr
+        msg["To"] = to_addr
+        msg["Subject"] = subject
+        msg["Date"] = formatdate(localtime=True)
+        msg["Message-ID"] = new_message_id
+        if reply_to_mid:
+            msg["In-Reply-To"] = reply_to_mid
+        if references:
+            msg["References"] = " ".join(references)
+
+        _send_reply_smtp(account, msg)
+
+        try:
+            _append_to_sent_imap(account, msg.as_bytes())
+        except Exception:
+            pass
+
+    doc = {
+        "org_id": org_id,
+        "dedupe_key": f"mid:{new_message_id}",
+        "message_id": new_message_id,
+        "thread_id": canonical_tid,
+        "from": from_addr,
+        "to": to_addr,
+        "date": now.isoformat(),
+        "subject": subject,
+        "body": payload.body,
+        "in_reply_to": [reply_to_mid] if reply_to_mid else [],
+        "references": references,
+        "case_status": latest.get("case_status", "open"),
+        "category_id": latest.get("category_id"),
+        "severity": latest.get("severity"),
+        "mail_account_id": str(account["_id"]),
+        "mailbox": "Sent",
+        "is_outbound": True,
+        "is_internal_note": payload.internal_note,
+        "created_at": now,
+    }
+    emails_collection.insert_one(doc)
+
+    return _emails_to_out(org_id, [doc])[0]
 

@@ -243,6 +243,11 @@ class EmailIngestResult(BaseModel):
 ThreadCaseStatus = Literal["open", "closed", "waiting_for_customer"]
 
 
+class ThreadReplyRequest(BaseModel):
+    body: str = Field(min_length=1)
+    internal_note: bool = False
+
+
 class ThreadStatusUpdateRequest(BaseModel):
     status: ThreadCaseStatus
 
@@ -306,3 +311,5 @@ class EmailOut(BaseModel):
     mail_account_name: Optional[str] = None
     assigned_to: Optional[str] = None
     assigned_to_name: Optional[str] = None
+    is_outbound: bool = False
+    is_internal_note: bool = False

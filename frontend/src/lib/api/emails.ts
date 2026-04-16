@@ -162,4 +162,26 @@ export const emailsApi = {
     }
     return res.json();
   },
+
+  replyToThread: async (
+    orgId: string,
+    threadId: string,
+    body: string,
+    internalNote: boolean,
+    token: string,
+  ): Promise<Email> => {
+    const res = await apiFetch(
+      `/organizations/${orgId}/emails/threads/${encodeURIComponent(threadId)}/reply`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ body, internal_note: internalNote }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to send reply');
+    }
+    return res.json();
+  },
 };
