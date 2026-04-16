@@ -689,9 +689,6 @@ export default function ThreadPage({
                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
                       }}
                     >
-                      <MenuItem value="__none__" disabled>
-                        Not set
-                      </MenuItem>
                       <MenuItem value="critical">Critical</MenuItem>
                       <MenuItem value="non_critical">Non-Critical</MenuItem>
                     </Select>
