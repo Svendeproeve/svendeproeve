@@ -824,6 +824,12 @@ def reply_to_thread(
     if subject and not subject.lower().startswith("re:"):
         subject = f"Re: {subject}"
 
+    def _bracket(mid: str) -> str:
+        mid = mid.strip()
+        if mid and not mid.startswith("<"):
+            return f"<{mid}>"
+        return mid
+
     if not payload.internal_note:
         msg = MIMEText(payload.body, "plain", "utf-8")
         msg["From"] = from_addr
@@ -832,9 +838,9 @@ def reply_to_thread(
         msg["Date"] = formatdate(localtime=True)
         msg["Message-ID"] = new_message_id
         if reply_to_mid:
-            msg["In-Reply-To"] = reply_to_mid
+            msg["In-Reply-To"] = _bracket(reply_to_mid)
         if references:
-            msg["References"] = " ".join(references)
+            msg["References"] = " ".join(_bracket(r) for r in references)
 
         _send_reply_smtp(account, msg)
 

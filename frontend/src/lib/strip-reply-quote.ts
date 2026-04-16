@@ -14,10 +14,14 @@ export function stripReplyQuote(body: string): string {
   const text = body.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   const patterns: RegExp[] = [
+    // Danish (Gmail wrap): "Den ... skrev ... <" then wrapped email ">:" on next line(s)
+    /\n\s*Den [^\n]+<\s*\n[^\n]*>:\s*\n/i,
     // Danish (Gmail wrap): line "Den ... skrev ... <...>" then next line ">:" (optional spaces)
     /\n\s*Den [^\n]+\n\s*>\s*:\s*\n/i,
     // Danish single line: "Den ... skrev ...:"
     /\n\s*Den .+ skrev .+:\s*\n/i,
+    // English (Gmail wrap): "On ... wrote" with wrapped address
+    /\nOn [^\n]+<\s*\n[^\n]*>:\s*\n/i,
     // English: "On ... wrote:" (single line; multiline variants below)
     /\nOn .+ wrote:\s*\n/i,
     // German / French
