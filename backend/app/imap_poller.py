@@ -141,6 +141,19 @@ def upsert_emails(
     for tid in inserted_thread_ids:
         _reopen_thread(thread_cases=thread_cases, emails=emails, org_id=org_id, thread_id=tid, now=now)
 
+    # Inherit category/severity from existing thread siblings so replies
+    # appear in the correct category even without AI auto-categorization.
+    for tid in inserted_thread_ids:
+        sibling = emails.find_one(
+            {"org_id": org_id, "thread_id": tid, "category_id": {"$exists": True, "$ne": None}},
+            sort=[("created_at", 1)],
+        )
+        if sibling and sibling.get("category_id"):
+            emails.update_many(
+                {"org_id": org_id, "thread_id": tid, "$or": [{"category_id": None}, {"category_id": {"$exists": False}}]},
+                {"$set": {"category_id": sibling["category_id"], "severity": sibling.get("severity")}},
+            )
+
     return inserted, skipped
 
 

@@ -7,6 +7,7 @@ from app.db import (
     mail_accounts_collection,
     member_category_access_collection,
     memberships_collection,
+    users_collection,
 )
 from app.dependencies import get_current_user, require_org_admin, require_org_membership
 from app.schemas import (
@@ -14,6 +15,7 @@ from app.schemas import (
     CategoryOut,
     CategoryUpdateRequest,
     MemberCategoryAccessUpdateRequest,
+    MembershipOut,
 )
 from app.utils import parse_object_id
 
@@ -179,3 +181,53 @@ def get_member_category_access(
     )
     category_ids = sorted([d["category_id"] for d in docs])
     return {"user_id": member_user_id, "category_ids": category_ids}
+
+
+@router.get("/{category_id}/members", response_model=list[MembershipOut])
+def list_category_members(
+    org_id: str,
+    category_id: str,
+    current_user: dict = Depends(get_current_user),
+) -> list[MembershipOut]:
+    """Return org members who have access to this category.
+
+    Owners and admins always have implicit access;
+    regular members need an explicit entry in member_category_access.
+    """
+    require_org_membership(org_id, str(current_user["_id"]))
+
+    oid = parse_object_id(category_id, "category_id")
+    cat = categories_collection.find_one({"_id": oid, "org_id": org_id})
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    all_members = list(memberships_collection.find({"org_id": org_id}))
+    access_docs = list(
+        member_category_access_collection.find({"org_id": org_id, "category_id": category_id})
+    )
+    member_user_ids_with_access = {d["user_id"] for d in access_docs}
+
+    eligible: list[dict] = []
+    for m in all_members:
+        if m["role"] in ("owner", "admin"):
+            eligible.append(m)
+        elif m["user_id"] in member_user_ids_with_access:
+            eligible.append(m)
+
+    user_ids = [parse_object_id(m["user_id"], "user_id") for m in eligible]
+    users = (
+        {str(u["_id"]): u for u in users_collection.find({"_id": {"$in": user_ids}})}
+        if user_ids
+        else {}
+    )
+
+    return [
+        MembershipOut(
+            user_id=m["user_id"],
+            user_email=users.get(m["user_id"], {}).get("email", "unknown@example.com"),
+            user_full_name=users.get(m["user_id"], {}).get("full_name"),
+            role=m["role"],
+            created_at=m["created_at"],
+        )
+        for m in eligible
+    ]

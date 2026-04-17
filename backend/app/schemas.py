@@ -240,7 +240,27 @@ class EmailIngestResult(BaseModel):
     skipped: int
 
 
-ThreadCaseStatus = Literal["open", "closed"]
+ThreadCaseStatus = Literal["open", "closed", "waiting_for_customer"]
+
+
+class ThreadReplyRequest(BaseModel):
+    body: str = Field(min_length=1)
+    internal_note: bool = False
+
+
+class ThreadStatusUpdateRequest(BaseModel):
+    status: ThreadCaseStatus
+
+
+class ThreadAssignRequest(BaseModel):
+    assigned_to: Optional[str] = Field(
+        default=None,
+        description="user_id of the member to assign, or null to unassign.",
+    )
+
+
+class ThreadCategoryUpdateRequest(BaseModel):
+    category_id: str = Field(description="Target category id to move the thread into.")
 
 
 class ThreadCaseOut(BaseModel):
@@ -249,6 +269,8 @@ class ThreadCaseOut(BaseModel):
     status: ThreadCaseStatus
     updated_at: datetime
     closed_at: Optional[datetime] = None
+    assigned_to: Optional[str] = None
+    assigned_to_name: Optional[str] = None
 
 
 class CategorizeEmailsRequest(BaseModel):
@@ -284,3 +306,10 @@ class EmailOut(BaseModel):
     severity: Optional[EmailSeverity] = None
     case_status: str
     created_at: datetime
+    mail_account_id: Optional[str] = None
+    mailbox: Optional[str] = None
+    mail_account_name: Optional[str] = None
+    assigned_to: Optional[str] = None
+    assigned_to_name: Optional[str] = None
+    is_outbound: bool = False
+    is_internal_note: bool = False

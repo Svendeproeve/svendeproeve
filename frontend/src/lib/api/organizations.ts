@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../swr-config';
+import { apiFetch } from '../swr-config';
 
 export interface OrganizationCreateData {
   name: string;
@@ -26,7 +26,7 @@ export interface InviteMemberData {
 
 export const organizationApi = {
   create: async (data: OrganizationCreateData, token: string): Promise<Organization> => {
-    const res = await fetch(`${API_BASE_URL}/organizations`, {
+    const res = await apiFetch('/organizations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
@@ -39,7 +39,7 @@ export const organizationApi = {
   },
 
   list: async (token: string): Promise<Organization[]> => {
-    const res = await fetch(`${API_BASE_URL}/organizations`, {
+    const res = await apiFetch('/organizations', {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('Failed to fetch organizations');
@@ -47,7 +47,7 @@ export const organizationApi = {
   },
 
   listMembers: async (orgId: string, token: string): Promise<Member[]> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/members`, {
+    const res = await apiFetch(`/organizations/${orgId}/members`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('Failed to fetch members');
@@ -55,7 +55,7 @@ export const organizationApi = {
   },
 
   inviteMember: async (orgId: string, data: InviteMemberData, token: string): Promise<Member> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/members/invite`, {
+    const res = await apiFetch(`/organizations/${orgId}/members/invite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),

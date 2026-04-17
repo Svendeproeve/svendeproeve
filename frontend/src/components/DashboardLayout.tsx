@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useState } from 'react';
+import type { SxProps, Theme } from '@mui/material/styles';
 import { usePathname } from 'next/navigation';
 import {
   Box,
@@ -66,9 +67,11 @@ interface DashboardLayoutProps {
   children: ReactNode;
   userName?: string;
   userRole?: 'owner' | 'admin' | 'member';
+  /** Merged onto the main scroll area (default padding is 3). */
+  contentSx?: SxProps<Theme>;
 }
 
-export default function DashboardLayout({ children, userName, userRole }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, userName, userRole, contentSx }: DashboardLayoutProps) {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({ Categories: true });
   const { signout, user } = useAuth();
@@ -103,7 +106,7 @@ export default function DashboardLayout({ children, userName, userRole }: Dashbo
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Drawer
         variant="permanent"
         sx={{
@@ -114,7 +117,8 @@ export default function DashboardLayout({ children, userName, userRole }: Dashbo
             boxSizing: 'border-box',
             bgcolor: '#222222',
             borderRight: 'none',
-            overflow: 'hidden',
+            overflow: 'auto',
+            height: '100%',
           },
         }}
       >
@@ -212,9 +216,19 @@ export default function DashboardLayout({ children, userName, userRole }: Dashbo
         </Box>
       </Drawer>
 
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         <Box
           sx={{
+            flexShrink: 0,
             height: 60,
             bgcolor: '#2c2c2c',
             display: 'flex',
@@ -245,7 +259,18 @@ export default function DashboardLayout({ children, userName, userRole }: Dashbo
           </Box>
         </Box>
 
-        <Box sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: 'auto',
+            bgcolor: 'background.default',
+            p: 3,
+            display: 'flex',
+            flexDirection: 'column',
+            ...contentSx,
+          }}
+        >
           {children}
         </Box>
       </Box>

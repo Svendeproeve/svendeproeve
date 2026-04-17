@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../swr-config';
+import { apiFetch } from '../swr-config';
 import type { Email, EmailSeverity } from './categories';
 
 export type { EmailSeverity };
@@ -16,13 +16,42 @@ export interface CategorizeEmailsResult {
 }
 
 export const emailsApi = {
+  listAssignedToMe: async (orgId: string, token: string): Promise<Email[]> => {
+    const res = await apiFetch(`/organizations/${orgId}/emails/assigned-to-me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch assigned threads');
+    }
+    return res.json();
+  },
+
+  /** Emails in one thread for a category, oldest first (requires category_id on the API). */
+  listThreadEmails: async (
+    orgId: string,
+    categoryId: string,
+    threadId: string,
+    token: string
+  ): Promise<Email[]> => {
+    const params = new URLSearchParams({
+      category_id: categoryId,
+      thread_id: threadId,
+    });
+    const res = await apiFetch(`/organizations/${orgId}/emails?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch thread emails');
+    }
+    return res.json();
+  },
+
   getUncategorizedCount: async (orgId: string, token: string): Promise<{ count: number }> => {
-    const res = await fetch(
-      `${API_BASE_URL}/organizations/${orgId}/emails/uncategorized-count`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const res = await apiFetch(`/organizations/${orgId}/emails/uncategorized-count`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Failed to fetch uncategorized count');
@@ -35,7 +64,7 @@ export const emailsApi = {
     payload: CategorizeEmailsPayload,
     token: string
   ): Promise<CategorizeEmailsResult> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/emails/categorize`, {
+    const res = await apiFetch(`/organizations/${orgId}/emails/categorize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -56,8 +85,8 @@ export const emailsApi = {
     severity: EmailSeverity,
     token: string
   ): Promise<Email> => {
-    const res = await fetch(
-      `${API_BASE_URL}/organizations/${orgId}/emails/${encodeURIComponent(emailId)}/severity`,
+    const res = await apiFetch(
+      `/organizations/${orgId}/emails/${encodeURIComponent(emailId)}/severity`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -67,6 +96,91 @@ export const emailsApi = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Failed to update severity');
+    }
+    return res.json();
+  },
+
+  updateThreadStatus: async (
+    orgId: string,
+    threadId: string,
+    status: 'open' | 'closed' | 'waiting_for_customer',
+    token: string,
+  ): Promise<{ status: string }> => {
+    const res = await apiFetch(
+      `/organizations/${orgId}/emails/threads/${encodeURIComponent(threadId)}/status`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update thread status');
+    }
+    return res.json();
+  },
+
+  assignThread: async (
+    orgId: string,
+    threadId: string,
+    assignedTo: string | null,
+    token: string,
+  ): Promise<{ assigned_to: string | null; assigned_to_name: string | null }> => {
+    const res = await apiFetch(
+      `/organizations/${orgId}/emails/threads/${encodeURIComponent(threadId)}/assign`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ assigned_to: assignedTo }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to assign thread');
+    }
+    return res.json();
+  },
+
+  updateThreadCategory: async (
+    orgId: string,
+    threadId: string,
+    categoryId: string,
+    token: string,
+  ): Promise<{ thread_id: string; category_id: string; updated: string }> => {
+    const res = await apiFetch(
+      `/organizations/${orgId}/emails/threads/${encodeURIComponent(threadId)}/category`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ category_id: categoryId }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update thread category');
+    }
+    return res.json();
+  },
+
+  replyToThread: async (
+    orgId: string,
+    threadId: string,
+    body: string,
+    internalNote: boolean,
+    token: string,
+  ): Promise<Email> => {
+    const res = await apiFetch(
+      `/organizations/${orgId}/emails/threads/${encodeURIComponent(threadId)}/reply`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ body, internal_note: internalNote }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to send reply');
     }
     return res.json();
   },

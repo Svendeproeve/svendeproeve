@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../swr-config';
+import { API_BASE_URL, apiFetch } from '../swr-config';
 
 export interface SignupData {
   email: string;
@@ -50,7 +50,7 @@ export const authApi = {
   },
 
   getMe: async (token: string) => {
-    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+    const res = await apiFetch('/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('Failed to get user');
