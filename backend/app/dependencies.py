@@ -8,7 +8,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/signin")
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
-    payload = decode_access_token(token)
+    try:
+        payload = decode_access_token(token)
+    except ValueError:
+        # Expired or malformed JWT — must be 401 so clients can redirect to login.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
     subject = payload.get("sub")
     if not subject:
         raise HTTPException(

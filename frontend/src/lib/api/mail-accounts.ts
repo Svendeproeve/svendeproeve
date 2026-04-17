@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../swr-config';
+import { apiFetch } from '../swr-config';
 
 export interface MailAccount {
   id: string;
@@ -56,7 +56,7 @@ type ImapTestData = Pick<MailAccountCreateData, 'imap_host' | 'imap_port' | 'ima
 
 export const mailAccountApi = {
   list: async (orgId: string, token: string): Promise<MailAccount[]> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts`, {
+    const res = await apiFetch(`/organizations/${orgId}/mail-accounts`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('Failed to fetch mail accounts');
@@ -64,7 +64,7 @@ export const mailAccountApi = {
   },
 
   test: async (orgId: string, data: ImapTestData, token: string): Promise<{ ok: boolean; error?: string }> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts/test`, {
+    const res = await apiFetch(`/organizations/${orgId}/mail-accounts/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
@@ -74,7 +74,7 @@ export const mailAccountApi = {
   },
 
   testSmtp: async (orgId: string, data: MailAccountSmtpTestData, token: string): Promise<{ ok: boolean; error?: string }> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts/test-smtp`, {
+    const res = await apiFetch(`/organizations/${orgId}/mail-accounts/test-smtp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
@@ -84,7 +84,7 @@ export const mailAccountApi = {
   },
 
   create: async (orgId: string, data: MailAccountCreateData, token: string): Promise<MailAccount> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts`, {
+    const res = await apiFetch(`/organizations/${orgId}/mail-accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
@@ -97,7 +97,7 @@ export const mailAccountApi = {
   },
 
   update: async (orgId: string, mailAccountId: string, data: MailAccountUpdateData, token: string): Promise<MailAccount> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts/${mailAccountId}`, {
+    const res = await apiFetch(`/organizations/${orgId}/mail-accounts/${mailAccountId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
@@ -113,7 +113,7 @@ export const mailAccountApi = {
     imap: { ok: boolean; error?: string };
     smtp: { ok: boolean; error?: string } | null;
   }> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts/${mailAccountId}/status`, {
+    const res = await apiFetch(`/organizations/${orgId}/mail-accounts/${mailAccountId}/status`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('Failed to fetch account status');
@@ -121,7 +121,7 @@ export const mailAccountApi = {
   },
 
   delete: async (orgId: string, mailAccountId: string, token: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/organizations/${orgId}/mail-accounts/${mailAccountId}`, {
+    const res = await apiFetch(`/organizations/${orgId}/mail-accounts/${mailAccountId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

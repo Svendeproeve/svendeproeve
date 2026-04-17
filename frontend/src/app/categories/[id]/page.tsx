@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Typography,
@@ -11,7 +12,6 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
-  Chip,
   Alert,
   Tooltip,
   IconButton,
@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useCategories } from '@/hooks/useCategories';
 import { organizationApi, categoryApi, emailsApi, Member, Email } from '@/lib/api';
+import { CaseStatusChip, SeverityChip } from '@/lib/email-status-chips';
 import useSWR from 'swr';
 
 function formatDate(raw: string): string {
@@ -29,14 +30,6 @@ function formatDate(raw: string): string {
   const d = new Date(raw);
   if (isNaN(d.getTime())) return raw;
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function formatCaseStatus(raw: string): string {
-  const s = (raw || '').toLowerCase();
-  if (s === 'open') return 'Open';
-  if (s === 'closed') return 'Closed';
-  if (!raw) return '—';
-  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 }
 
 /**
@@ -71,6 +64,7 @@ function oneRowPerThread(emails: Email[]): Email[] {
 
 export default function CategoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const { user, token } = useAuth();
   const { currentOrg } = useOrganizations();
 
@@ -199,6 +193,7 @@ export default function CategoryPage({ params }: { params: Promise<{ id: string 
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>From</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Last activity</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Severity</TableCell>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Assigned to</TableCell>
                 <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Status</TableCell>
               </TableRow>
             </TableHead>
@@ -206,59 +201,32 @@ export default function CategoryPage({ params }: { params: Promise<{ id: string 
               {threadRows.length > 0 ? threadRows.map(email => (
                 <TableRow
                   key={(email.thread_id || '').trim() || email.id}
-                  sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}
+                  hover
+                  onClick={() => {
+                    // Use Mongo email id only — Message-IDs in thread_id break in URL path segments.
+                    router.push(`/categories/${id}/thread/${email.id}`);
+                  }}
+                  sx={{
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
+                  }}
                 >
                   <TableCell sx={{ color: 'white' }}>{email.subject || '(no subject)'}</TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>{email.sender}</TableCell>
                   <TableCell sx={{ color: 'text.secondary' }}>{formatDate(email.date || email.created_at)}</TableCell>
                   <TableCell>
-                    <Chip
-                      component="span"
-                      label={
-                        email.severity === 'critical'
-                          ? 'Critical'
-                          : email.severity === 'non_critical'
-                            ? 'Non-Critical'
-                            : 'Not set'
-                      }
-                      size="small"
-                      sx={{
-                        cursor: 'default',
-                        fontWeight: 600,
-                        fontSize: '0.7rem',
-                        ...(email.severity === 'critical'
-                          ? {
-                              bgcolor: 'rgba(244, 67, 54, 0.15)',
-                              color: '#f44336',
-                            }
-                          : email.severity === 'non_critical'
-                            ? {
-                                bgcolor: 'rgba(33, 150, 243, 0.15)',
-                                color: '#2196f3',
-                              }
-                            : {
-                                bgcolor: 'rgba(255,255,255,0.08)',
-                                color: 'text.secondary',
-                              }),
-                      }}
-                    />
+                    <SeverityChip severity={email.severity} />
+                  </TableCell>
+                  <TableCell sx={{ color: 'text.secondary' }}>
+                    {email.assigned_to_name || '—'}
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={formatCaseStatus(email.case_status)}
-                      size="small"
-                      sx={{
-                        bgcolor: email.case_status?.toLowerCase() === 'open' ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.08)',
-                        color: email.case_status?.toLowerCase() === 'open' ? '#4caf50' : 'text.secondary',
-                        fontWeight: 600,
-                        fontSize: '0.7rem',
-                      }}
-                    />
+                    <CaseStatusChip caseStatus={email.case_status} />
                   </TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={6} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
                     No threads in this category yet.
                   </TableCell>
                 </TableRow>
