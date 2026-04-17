@@ -96,3 +96,5 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 frontend/tests/.test-db-info.json
+backend/.env.test
+backend/.env.example

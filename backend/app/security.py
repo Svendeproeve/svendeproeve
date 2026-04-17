@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import secrets
 
 import bcrypt
 from jose import JWTError, jwt
@@ -29,3 +30,8 @@ def decode_access_token(token: str) -> dict:
         )
     except JWTError as exc:
         raise ValueError("Invalid token") from exc
+
+
+def generate_reset_token() -> str:
+    """Generate a secure random token for password reset"""
+    return secrets.token_urlsafe(32)

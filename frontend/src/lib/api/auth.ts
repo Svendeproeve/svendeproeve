@@ -56,4 +56,30 @@ export const authApi = {
     if (!res.ok) throw new Error('Failed to get user');
     return res.json();
   },
+
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Request failed');
+    }
+    return res.json();
+  },
+
+  resetPassword: async (token: string, new_password: string): Promise<{ message: string }> => {
+    const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, new_password }),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Password reset failed');
+    }
+    return res.json();
+  },
 };
