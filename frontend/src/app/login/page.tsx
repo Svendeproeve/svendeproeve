@@ -122,6 +122,7 @@ export default function LoginPage() {
           <Link
             component={NextLink}
             href="/forgot-password"
+            data-testid="login-forgot-password-link"
             sx={{ color: 'text.secondary', textDecoration: 'underline', fontSize: '0.875rem' }}
           >
             Forgot password?

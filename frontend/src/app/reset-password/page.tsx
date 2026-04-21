@@ -121,13 +121,13 @@ function ResetPasswordForm() {
         </Typography>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" data-testid="reset-password-error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity="success" data-testid="reset-password-success" sx={{ mb: 2 }}>
             Password reset successfully! Redirecting to login...
           </Alert>
         )}
@@ -146,6 +146,7 @@ function ResetPasswordForm() {
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           disabled={isLoading || success}
+          inputProps={{ 'data-testid': 'reset-password-new-password-input' }}
           sx={{ mb: 2 }}
         />
 
@@ -163,6 +164,7 @@ function ResetPasswordForm() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           disabled={isLoading || success}
+          inputProps={{ 'data-testid': 'reset-password-confirm-password-input' }}
           sx={{ mb: 2 }}
         />
 
@@ -171,6 +173,7 @@ function ResetPasswordForm() {
           type="submit"
           variant="contained"
           disabled={isLoading || success}
+          data-testid="reset-password-submit-button"
           sx={{
             py: 1.5,
             fontSize: '1.1rem',

@@ -88,13 +88,13 @@ export default function ForgotPasswordPage() {
         </Typography>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" data-testid="forgot-password-error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity="success" data-testid="forgot-password-success" sx={{ mb: 2 }}>
             If the email exists, a password reset link has been sent. Please check your inbox.
           </Alert>
         )}
@@ -113,6 +113,7 @@ export default function ForgotPasswordPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isLoading}
+          inputProps={{ 'data-testid': 'forgot-password-email-input' }}
           sx={{ mb: 2 }}
         />
 
@@ -121,6 +122,7 @@ export default function ForgotPasswordPage() {
           type="submit"
           variant="contained"
           disabled={isLoading}
+          data-testid="forgot-password-submit-button"
           sx={{
             py: 1.5,
             fontSize: '1.1rem',
