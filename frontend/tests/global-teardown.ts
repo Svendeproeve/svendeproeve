@@ -5,24 +5,23 @@ import path from "path";
 async function globalTeardown(config: FullConfig) {
   console.log("Running global teardown...");
 
-  const backendProcess = global.__BACKEND_PROCESS__;
+  const isCI = !!process.env.CI;
 
-  if (backendProcess) {
-    console.log("Stopping backend...");
-    if (process.platform === "win32") {
+  if (isCI) {
+    const backendProcess = (global as any).__BACKEND_PROCESS__;
+    if (backendProcess) {
+      console.log("Stopping backend...");
       try {
         execSync(`taskkill /pid ${backendProcess.pid} /f /t`);
-      } catch (error) {
-        console.log("Backend already stopped");
+      } catch {
+        backendProcess.kill("SIGTERM");
       }
-    } else {
-      backendProcess.kill("SIGTERM");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      console.log("Backend stopped");
     }
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    console.log("Backend stopped");
+  } else {
+    console.log("Keeping test containers running for next test run");
   }
-
-  console.log("Keeping MongoDB container running for next test run");
 }
 
 export default globalTeardown;

@@ -17,7 +17,7 @@ export default defineConfig({
   },
 
   env: {
-    API_URL: process.env.API_URL || 'http://localhost:8000',
+    API_URL: process.env.API_URL || (process.env.CI ? 'http://localhost:8000' : 'http://localhost:8001'),
   },
 
   projects: [
@@ -31,5 +31,8 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
+    env: {
+      NEXT_PUBLIC_API_BASE_URL: process.env.CI ? 'http://localhost:8000' : 'http://localhost:8001',
+    },
   },
 });

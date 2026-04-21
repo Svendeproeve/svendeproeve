@@ -1,14 +1,35 @@
 services:
-  mongodb-test:
+  mongo-test:
     image: mongo:7
-    container_name: sortr-mongodb-test
+    container_name: sortr-mongo-test
     ports:
-      - "27018:27017"
-    environment:
-      MONGO_INITDB_DATABASE: sortr_test
+      # Use 27019 to avoid clashing with the dev stack on 27018.
+      - "27019:27017"
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 10s
+
+  api-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sortr-api-test
+    depends_on:
+      mongo-test:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env.test
+    environment:
+      # Override the localhost values in .env.test with Docker-internal addresses.
+      - MONGODB_URI=mongodb://mongo-test:27017
+      - MONGODB_DB=sortr_test_playwright
+    ports:
+      - "8001:8000"
+    # Mount host code so changes are reflected without rebuilding the image.
+    volumes:
+      - ./backend/app:/app/app
+    # No --reload: test runs should be stable.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

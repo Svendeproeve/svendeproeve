@@ -1,48 +1,38 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Box, TextField, Button, Typography, Link, Alert } from '@mui/material';
 import NextLink from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { authApi } from '@/lib/api/auth';
 
-export default function LoginPage() {
-  const router = useRouter();
-  const { signin, isAuthenticated, isLoading: authLoading } = useAuth();
-
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push('/dashboard');
-    }
-  }, [isAuthenticated, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess(false);
 
-    if (!email || !password) {
-      setError('All fields are required');
+    if (!email) {
+      setError('Email is required');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      await signin({ email, password });
-      router.push('/dashboard');
+      await authApi.forgotPassword(email);
+      setSuccess(true);
+      setEmail('');
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      setError(err.message || 'Request failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (authLoading || isAuthenticated) return null;
 
   return (
     <Box
@@ -57,10 +47,8 @@ export default function LoginPage() {
     >
       <Typography
         variant="h1"
-        data-testid="login-title"
         sx={{
           fontSize: '4rem',
-          
           mb: 8,
           color: 'white',
         }}
@@ -73,12 +61,41 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         sx={{
           width: '100%',
-          maxWidth: 300,
+          maxWidth: 400,
         }}
       >
+        <Typography
+          variant="h5"
+          sx={{
+            mb: 2,
+            color: 'white',
+            fontWeight: 600,
+            textAlign: 'center',
+          }}
+        >
+          Reset Password
+        </Typography>
+
+        <Typography
+          variant="body2"
+          sx={{
+            mb: 3,
+            color: 'text.secondary',
+            textAlign: 'center',
+          }}
+        >
+          Enter your email address and we'll send you a link to reset your password.
+        </Typography>
+
         {error && (
-          <Alert severity="error" data-testid="login-error" sx={{ mb: 2 }}>
+          <Alert severity="error" data-testid="forgot-password-error" sx={{ mb: 2 }}>
             {error}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert severity="success" data-testid="forgot-password-success" sx={{ mb: 2 }}>
+            If the email exists, a password reset link has been sent. Please check your inbox.
           </Alert>
         )}
 
@@ -96,45 +113,16 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isLoading}
-          inputProps={{ 'data-testid': 'login-email-input' }}
+          inputProps={{ 'data-testid': 'forgot-password-email-input' }}
           sx={{ mb: 2 }}
         />
-
-        <Typography
-          variant="body1"
-          sx={{ mb: 1, color: 'white', fontWeight: 500 }}
-        >
-          Password
-        </Typography>
-        <TextField
-          fullWidth
-          type="password"
-          placeholder="••••••••••••••••"
-          variant="outlined"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-          inputProps={{ 'data-testid': 'login-password-input' }}
-          sx={{ mb: 1 }}
-        />
-
-        <Box sx={{ mb: 2, textAlign: 'right' }}>
-          <Link
-            component={NextLink}
-            href="/forgot-password"
-            data-testid="login-forgot-password-link"
-            sx={{ color: 'text.secondary', textDecoration: 'underline', fontSize: '0.875rem' }}
-          >
-            Forgot password?
-          </Link>
-        </Box>
 
         <Button
           fullWidth
           type="submit"
           variant="contained"
           disabled={isLoading}
-          data-testid="login-submit-button"
+          data-testid="forgot-password-submit-button"
           sx={{
             py: 1.5,
             fontSize: '1.1rem',
@@ -142,18 +130,18 @@ export default function LoginPage() {
             textTransform: 'none',
           }}
         >
-          {isLoading ? 'Logging in...' : 'Login'}
+          {isLoading ? 'Sending...' : 'Send Reset Link'}
         </Button>
 
         <Box sx={{ mt: 2, textAlign: 'center' }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Don't have an account yet?{' '}
+            Remember your password?{' '}
             <Link
               component={NextLink}
-              href="/register"
+              href="/login"
               sx={{ color: 'white', textDecoration: 'underline' }}
             >
-              Register here!
+              Back to Login
             </Link>
           </Typography>
         </Box>
