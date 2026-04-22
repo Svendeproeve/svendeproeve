@@ -251,7 +251,14 @@ export default function MailAccountManagementPage() {
 
           <Box component="form" onSubmit={handleCreate}>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: 2, mb: 2 }}>
-              <TextField label="Account Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} disabled={isSubmitting} required />
+              <TextField
+                label="Account Name"
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                disabled={isSubmitting}
+                required
+                helperText="Friendly name to identify this mail account (e.g., 'Support Email', 'Sales Team')"
+              />
               <TextField label="IMAP Host" value={form.imap_host} onChange={e => setForm(f => ({ ...f, imap_host: e.target.value }))} disabled={isSubmitting} required />
               <TextField label="Port" type="number" value={form.imap_port} onChange={e => setForm(f => ({ ...f, imap_port: parseInt(e.target.value) || 993 }))} disabled={isSubmitting} required inputProps={{ min: 1, max: 65535 }} />
             </Box>
@@ -398,7 +405,14 @@ export default function MailAccountManagementPage() {
         <DialogContent>
           {editError && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{editError}</Alert>}
           <Box component="form" id="edit-mail-form" onSubmit={handleEdit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField label="Account Name" value={editForm.name || ''} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} disabled={isEditSubmitting} fullWidth />
+            <TextField
+              label="Account Name"
+              value={editForm.name || ''}
+              onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+              disabled={isEditSubmitting}
+              fullWidth
+              helperText="Friendly name to identify this mail account"
+            />
             <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }}>
               <Typography variant="caption" sx={{ color: 'text.secondary', px: 1 }}>IMAP</Typography>
             </Divider>
