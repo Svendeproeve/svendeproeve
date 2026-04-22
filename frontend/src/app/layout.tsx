@@ -3,6 +3,7 @@ import { Inter, Inria_Serif } from "next/font/google";
 import "./globals.css";
 import ThemeRegistry from "@/components/ThemeRegistry";
 import { SWRProvider } from "@/components/SWRProvider";
+import { SnackbarProvider } from "@/contexts/SnackbarContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -33,7 +34,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeRegistry>
-          <SWRProvider>{children}</SWRProvider>
+          <SWRProvider>
+            <SnackbarProvider>{children}</SnackbarProvider>
+          </SWRProvider>
         </ThemeRegistry>
       </body>
     </html>

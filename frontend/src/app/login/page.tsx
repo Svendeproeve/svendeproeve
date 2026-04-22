@@ -1,18 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Box, TextField, Button, Typography, Link, Alert } from '@mui/material';
+import { Box, TextField, Button, Typography, Link } from '@mui/material';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const { signin, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { showSnackbar } = useSnackbar();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -23,10 +24,9 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
     if (!email || !password) {
-      setError('All fields are required');
+      showSnackbar('All fields are required', 'error');
       return;
     }
 
@@ -36,7 +36,7 @@ export default function LoginPage() {
       await signin({ email, password });
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      showSnackbar(err.message || 'Login failed. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -78,12 +78,6 @@ export default function LoginPage() {
           maxWidth: 300,
         }}
       >
-        {error && (
-          <Alert severity="error" data-testid="login-error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
         <Typography
           variant="body1"
           sx={{ mb: 1, color: 'white', fontWeight: 500 }}

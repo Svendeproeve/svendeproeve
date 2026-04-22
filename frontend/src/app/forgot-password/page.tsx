@@ -4,20 +4,18 @@ import { useState } from 'react';
 import { Box, TextField, Button, Typography, Link, Alert } from '@mui/material';
 import NextLink from 'next/link';
 import { authApi } from '@/lib/api/auth';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 export default function ForgotPasswordPage() {
+  const { showSnackbar } = useSnackbar();
   const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess(false);
 
     if (!email) {
-      setError('Email is required');
+      showSnackbar('Email is required', 'error');
       return;
     }
 
@@ -25,10 +23,10 @@ export default function ForgotPasswordPage() {
 
     try {
       await authApi.forgotPassword(email);
-      setSuccess(true);
+      showSnackbar('If the email exists, a password reset link has been sent. Please check your inbox.', 'success');
       setEmail('');
     } catch (err: any) {
-      setError(err.message || 'Request failed. Please try again.');
+      showSnackbar(err.message || 'Request failed. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -86,18 +84,6 @@ export default function ForgotPasswordPage() {
         >
           Enter your email address and we'll send you a link to reset your password.
         </Typography>
-
-        {error && (
-          <Alert severity="error" data-testid="forgot-password-error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" data-testid="forgot-password-success" sx={{ mb: 2 }}>
-            If the email exists, a password reset link has been sent. Please check your inbox.
-          </Alert>
-        )}
 
         <Typography
           variant="body1"

@@ -1,20 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Box, TextField, Button, Typography, Link, Alert } from '@mui/material';
+import { Box, TextField, Button, Typography, Link } from '@mui/material';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { signup, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { showSnackbar } = useSnackbar();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [justSignedUp, setJustSignedUp] = useState(false);
 
@@ -26,20 +27,19 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
     if (!fullName || !email || !password || !confirmPassword) {
-      setError('All fields are required');
+      showSnackbar('All fields are required', 'error');
       return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      showSnackbar('Password must be at least 8 characters', 'error');
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      showSnackbar('Passwords do not match', 'error');
       return;
     }
 
@@ -50,7 +50,7 @@ export default function RegisterPage() {
       await signup({ full_name: fullName, email, password });
       router.push('/onboarding');
     } catch (err: any) {
-      setError(err.message || 'Signup failed. Please try again.');
+      showSnackbar(err.message || 'Signup failed. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -90,12 +90,6 @@ export default function RegisterPage() {
           maxWidth: 300,
         }}
       >
-        {error && (
-          <Alert severity="error" data-testid="register-error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
         <Typography
           variant="body1"
           sx={{ mb: 1, color: 'white', fontWeight: 500 }}

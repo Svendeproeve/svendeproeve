@@ -5,46 +5,45 @@ import { Box, TextField, Button, Typography, Link, Alert } from '@mui/material';
 import NextLink from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi } from '@/lib/api/auth';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const { showSnackbar } = useSnackbar();
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
     if (!token) {
-      setError('Invalid or missing reset token');
+      showSnackbar('Invalid or missing reset token', 'error');
     }
-  }, [token]);
+  }, [token, showSnackbar]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess(false);
 
     if (!token) {
-      setError('Invalid or missing reset token');
+      showSnackbar('Invalid or missing reset token', 'error');
       return;
     }
 
     if (!newPassword || !confirmPassword) {
-      setError('All fields are required');
+      showSnackbar('All fields are required', 'error');
       return;
     }
 
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
+      showSnackbar('Password must be at least 8 characters long', 'error');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      showSnackbar('Passwords do not match', 'error');
       return;
     }
 
@@ -52,7 +51,8 @@ function ResetPasswordForm() {
 
     try {
       await authApi.resetPassword(token, newPassword);
-      setSuccess(true);
+      setIsSuccess(true);
+      showSnackbar('Password reset successfully! Redirecting to login...', 'success');
       setNewPassword('');
       setConfirmPassword('');
 
@@ -61,7 +61,7 @@ function ResetPasswordForm() {
         router.push('/login');
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Password reset failed. Please try again.');
+      showSnackbar(err.message || 'Password reset failed. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -120,18 +120,6 @@ function ResetPasswordForm() {
           Enter your new password below.
         </Typography>
 
-        {error && (
-          <Alert severity="error" data-testid="reset-password-error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" data-testid="reset-password-success" sx={{ mb: 2 }}>
-            Password reset successfully! Redirecting to login...
-          </Alert>
-        )}
-
         <Typography
           variant="body1"
           sx={{ mb: 1, color: 'white', fontWeight: 500 }}
@@ -145,7 +133,7 @@ function ResetPasswordForm() {
           variant="outlined"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
-          disabled={isLoading || success}
+          disabled={isLoading || isSuccess}
           inputProps={{ 'data-testid': 'reset-password-new-password-input' }}
           sx={{ mb: 2 }}
         />
@@ -163,7 +151,7 @@ function ResetPasswordForm() {
           variant="outlined"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          disabled={isLoading || success}
+          disabled={isLoading || isSuccess}
           inputProps={{ 'data-testid': 'reset-password-confirm-password-input' }}
           sx={{ mb: 2 }}
         />
@@ -172,7 +160,7 @@ function ResetPasswordForm() {
           fullWidth
           type="submit"
           variant="contained"
-          disabled={isLoading || success}
+          disabled={isLoading || isSuccess}
           data-testid="reset-password-submit-button"
           sx={{
             py: 1.5,
@@ -181,7 +169,7 @@ function ResetPasswordForm() {
             textTransform: 'none',
           }}
         >
-          {isLoading ? 'Resetting...' : success ? 'Success!' : 'Reset Password'}
+          {isLoading ? 'Resetting...' : isSuccess ? 'Success!' : 'Reset Password'}
         </Button>
 
         <Box sx={{ mt: 2, textAlign: 'center' }}>

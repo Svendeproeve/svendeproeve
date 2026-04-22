@@ -34,6 +34,7 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 import { useCategories } from '@/hooks/useCategories';
 import { categoryApi, mailAccountApi, CategoryCreateData, CategoryUpdateData, Category, MailAccount, organizationApi, Member } from '@/lib/api';
 import useSWR from 'swr';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 const DEFAULT_FORM: CategoryCreateData = { name: '', description: '', color: undefined };
 
@@ -41,6 +42,7 @@ export default function CategoryManagementPage() {
   const router = useRouter();
   const { isAuthenticated, user, token, isLoading: isLoadingAuth } = useAuth();
   const { organizations, currentOrg, isLoading: isLoadingOrgs } = useOrganizations();
+  const { showSnackbar } = useSnackbar();
 
   const { categories, isLoading: isLoadingCategories, mutate } = useCategories();
 
@@ -60,15 +62,12 @@ export default function CategoryManagementPage() {
 
   const [form, setForm] = useState<CategoryCreateData>(DEFAULT_FORM);
   const [selectedMailAccountIds, setSelectedMailAccountIds] = useState<string[]>([]);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [editCategory, setEditCategory] = useState<Category | null>(null);
   const [editForm, setEditForm] = useState<CategoryUpdateData>({});
   const [editSelectedMailAccountIds, setEditSelectedMailAccountIds] = useState<string[]>([]);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [editError, setEditError] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -86,8 +85,6 @@ export default function CategoryManagementPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     if (!currentOrg || !token) return;
     setIsSubmitting(true);
     try {
@@ -98,11 +95,12 @@ export default function CategoryManagementPage() {
         mail_account_ids: selectedMailAccountIds.length > 0 ? selectedMailAccountIds : undefined,
       }, token);
       await mutate();
+      const categoryName = form.name;
       setForm(DEFAULT_FORM);
       setSelectedMailAccountIds([]);
-      setSuccess(`Category "${form.name}" created`);
+      showSnackbar(`Category "${categoryName}" created`, 'success');
     } catch (err: any) {
-      setError(err.message || 'Failed to create category');
+      showSnackbar(err.message || 'Failed to create category', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -112,14 +110,12 @@ export default function CategoryManagementPage() {
     setEditCategory(category);
     setEditForm({ name: category.name, description: category.description || '', color: category.color });
     setEditSelectedMailAccountIds(category.mail_account_ids ?? []);
-    setEditError('');
   };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editCategory || !currentOrg || !token) return;
     setIsEditSubmitting(true);
-    setEditError('');
     try {
       await categoryApi.update(currentOrg.id, editCategory.id, {
         ...editForm,
@@ -127,8 +123,9 @@ export default function CategoryManagementPage() {
       }, token);
       await mutate();
       setEditCategory(null);
+      showSnackbar('Category updated successfully', 'success');
     } catch (err: any) {
-      setEditError(err.message || 'Failed to update category');
+      showSnackbar(err.message || 'Failed to update category', 'error');
     } finally {
       setIsEditSubmitting(false);
     }
@@ -141,8 +138,9 @@ export default function CategoryManagementPage() {
       await categoryApi.delete(currentOrg.id, deleteTarget.id, token);
       await mutate();
       setDeleteTarget(null);
+      showSnackbar('Category deleted successfully', 'success');
     } catch (err: any) {
-      setError(err.message || 'Failed to delete category');
+      showSnackbar(err.message || 'Failed to delete category', 'error');
       setDeleteTarget(null);
     } finally {
       setIsDeleting(false);
@@ -174,9 +172,6 @@ export default function CategoryManagementPage() {
       <Card sx={{ mb: 4, bgcolor: '#2c2c2c' }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 3, color: 'white' }}>Add Category</Typography>
-
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
           <Box component="form" onSubmit={handleCreate}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
@@ -336,7 +331,6 @@ export default function CategoryManagementPage() {
       <Dialog open={!!editCategory} onClose={() => setEditCategory(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Category</DialogTitle>
         <DialogContent>
-          {editError && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{editError}</Alert>}
           <Box component="form" id="edit-form" onSubmit={handleEdit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField label="Name" value={editForm.name || ''} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} disabled={isEditSubmitting} fullWidth inputProps={{ 'data-testid': 'category-edit-name' }} />
             <TextField label="Description (for AI)" value={editForm.description || ''} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} disabled={isEditSubmitting} fullWidth multiline rows={2} inputProps={{ 'data-testid': 'category-edit-description' }} />
