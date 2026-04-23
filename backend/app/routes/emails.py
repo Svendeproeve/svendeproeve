@@ -422,14 +422,23 @@ def list_my_assigned_threads(
         emails_collection.find({"org_id": org_id, "thread_id": {"$in": thread_ids}})
         .sort("created_at", 1)
     )
-    seen: set[str] = set()
-    first_per_thread: list[dict[str, Any]] = []
+    earliest_subject: dict[str, str] = {}
+    latest_per_thread: dict[str, dict[str, Any]] = {}
     for d in docs:
         tid = (d.get("thread_id") or "").strip()
-        if tid not in seen:
-            seen.add(tid)
-            first_per_thread.append(d)
-    return _emails_to_out(org_id, first_per_thread)
+        if not tid:
+            continue
+        if tid not in earliest_subject:
+            earliest_subject[tid] = d.get("subject") or ""
+        latest_per_thread[tid] = d
+
+    rows = []
+    for tid, latest in latest_per_thread.items():
+        row = dict(latest)
+        row["subject"] = earliest_subject.get(tid, latest.get("subject") or "")
+        rows.append(row)
+    rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    return _emails_to_out(org_id, rows)
 
 
 @router.get("", response_model=list[EmailOut])
