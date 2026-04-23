@@ -199,7 +199,18 @@ export default function ThreadPage({
   const [replyInternalNote, setReplyInternalNote] = useState(false);
   const replyInputRef = useRef<HTMLTextAreaElement | null>(null);
   const emailListRef = useRef<HTMLDivElement | null>(null);
+  const didInitialScrollRef = useRef(false);
   const [replySending, setReplySending] = useState(false);
+
+  useEffect(() => {
+    if (didInitialScrollRef.current) return;
+    if (!emails?.length || !emailListRef.current) return;
+    didInitialScrollRef.current = true;
+    requestAnimationFrame(() => {
+      const el = emailListRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+  }, [emails]);
 
   const handleSendReply = async () => {
     if (!currentOrg || !token || !threadId || !replyBody.trim()) return;
