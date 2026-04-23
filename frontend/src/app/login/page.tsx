@@ -111,19 +111,8 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           disabled={isLoading}
           inputProps={{ 'data-testid': 'login-password-input' }}
-          sx={{ mb: 1 }}
+          sx={{ mb: 2 }}
         />
-
-        <Box sx={{ mb: 2, textAlign: 'right' }}>
-          <Link
-            component={NextLink}
-            href="/forgot-password"
-            data-testid="login-forgot-password-link"
-            sx={{ color: 'text.secondary', textDecoration: 'underline', fontSize: '0.875rem' }}
-          >
-            Forgot password?
-          </Link>
-        </Box>
 
         <Button
           fullWidth
@@ -152,6 +141,14 @@ export default function LoginPage() {
               Register here!
             </Link>
           </Typography>
+          <Link
+            component={NextLink}
+            href="/forgot-password"
+            data-testid="login-forgot-password-link"
+            sx={{ display: 'inline-block', mt: 1, color: 'text.secondary', textDecoration: 'underline', fontSize: '0.875rem' }}
+          >
+            Forgot password?
+          </Link>
         </Box>
       </Box>
     </Box>

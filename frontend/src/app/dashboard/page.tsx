@@ -3,30 +3,20 @@
 import { useEffect } from 'react';
 import {
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   CircularProgress,
   Box,
+  Tooltip,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
+import ThreadTable from '@/components/ThreadTable';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useCategories } from '@/hooks/useCategories';
 import { organizationApi, emailsApi, Member, Email, Category } from '@/lib/api';
 import { CaseStatusChip, SeverityChip } from '@/lib/email-status-chips';
+import { formatAbsoluteDateTime, formatRelativeTime } from '@/lib/time';
 import useSWR from 'swr';
-
-function formatDate(raw: string): string {
-  if (!raw) return '—';
-  const d = new Date(raw);
-  if (isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 function categoryName(categories: Category[], categoryId: string | null | undefined): string {
   if (!categoryId) return '—';
@@ -82,52 +72,56 @@ export default function DashboardPage() {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Subject</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>From</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Category</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Severity</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Status</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Date</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {assignedEmails && assignedEmails.length > 0 ? (
-                assignedEmails.map(email => (
-                  <TableRow
-                    key={email.id}
-                    hover
-                    onClick={() => {
-                      if (email.category_id) {
-                        router.push(`/categories/${email.category_id}/thread/${email.id}`);
-                      }
-                    }}
-                    sx={{
-                      cursor: email.category_id ? 'pointer' : 'default',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
-                    }}
-                  >
-                    <TableCell sx={{ color: 'white' }}>{email.subject || '(no subject)'}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{email.sender}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{categoryName(categories, email.category_id)}</TableCell>
-                    <TableCell><SeverityChip severity={email.severity} /></TableCell>
-                    <TableCell><CaseStatusChip caseStatus={email.case_status} /></TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{formatDate(email.date || email.created_at)}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
-                    You are not assigned to any threads.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <ThreadTable
+          rows={assignedEmails ?? []}
+          onRowClick={e => {
+            if (e.category_id) {
+              router.push(`/categories/${e.category_id}/thread/${e.id}`);
+            }
+          }}
+          isRowClickable={e => Boolean(e.category_id)}
+          emptyMessage="You are not assigned to any threads."
+          columns={[
+            {
+              key: 'subject',
+              header: 'Subject',
+              cellSx: { color: 'white' },
+              render: e => e.subject || '(no subject)',
+            },
+            {
+              key: 'from',
+              header: 'From',
+              cellSx: { color: 'text.secondary' },
+              render: e => e.sender,
+            },
+            {
+              key: 'category',
+              header: 'Category',
+              cellSx: { color: 'text.secondary' },
+              render: e => categoryName(categories, e.category_id),
+            },
+            {
+              key: 'severity',
+              header: 'Severity',
+              render: e => <SeverityChip severity={e.severity} />,
+            },
+            {
+              key: 'status',
+              header: 'Status',
+              render: e => <CaseStatusChip caseStatus={e.case_status} />,
+            },
+            {
+              key: 'lastActivity',
+              header: 'Last activity',
+              cellSx: { color: 'text.secondary' },
+              render: e => (
+                <Tooltip title={formatAbsoluteDateTime(e.date || e.created_at)}>
+                  <span>{formatRelativeTime(e.date || e.created_at)}</span>
+                </Tooltip>
+              ),
+            },
+          ]}
+        />
       )}
     </DashboardLayout>
   );

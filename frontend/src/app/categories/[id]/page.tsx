@@ -5,32 +5,21 @@ import { useRouter } from 'next/navigation';
 import {
   Box,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   CircularProgress,
-  Alert,
   Tooltip,
   IconButton,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DashboardLayout from '@/components/DashboardLayout';
+import ThreadTable from '@/components/ThreadTable';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useCategories } from '@/hooks/useCategories';
 import { organizationApi, categoryApi, emailsApi, Member, Email } from '@/lib/api';
 import { CaseStatusChip, SeverityChip } from '@/lib/email-status-chips';
+import { formatAbsoluteDateTime, formatRelativeTime } from '@/lib/time';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 import useSWR from 'swr';
-
-function formatDate(raw: string): string {
-  if (!raw) return '—';
-  const d = new Date(raw);
-  if (isNaN(d.getTime())) return raw;
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 /**
  * One row per thread: latest message drives From / last activity / status;
@@ -67,6 +56,7 @@ export default function CategoryPage({ params }: { params: Promise<{ id: string 
   const router = useRouter();
   const { user, token } = useAuth();
   const { currentOrg } = useOrganizations();
+  const { showSnackbar } = useSnackbar();
 
   const { data: members, isLoading: isLoadingMembers } = useSWR<Member[]>(
     currentOrg && token ? ['members', currentOrg.id, token] : null,
@@ -94,18 +84,16 @@ export default function CategoryPage({ params }: { params: Promise<{ id: string 
   );
 
   const [isRecategorizing, setIsRecategorizing] = useState(false);
-  const [recatError, setRecatError] = useState('');
 
   const handleRecategorize = async () => {
     if (!currentOrg || !token) return;
-    setRecatError('');
     setIsRecategorizing(true);
     try {
       await emailsApi.categorize(currentOrg.id, { limit: 500, force: false }, token);
       await mutateEmails();
       await mutateUncCount();
     } catch (err: unknown) {
-      setRecatError(err instanceof Error ? err.message : 'Failed to re-categorize');
+      showSnackbar(err instanceof Error ? err.message : 'Failed to re-categorize', 'error');
     } finally {
       setIsRecategorizing(false);
     }
@@ -174,66 +162,57 @@ export default function CategoryPage({ params }: { params: Promise<{ id: string 
           </Box>
         )}
       </Box>
-      {recatError && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setRecatError('')}>
-          {recatError}
-        </Alert>
-      )}
-
       {isLoadingEmails ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Subject</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>From</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Last activity</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Severity</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Assigned to</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {threadRows.length > 0 ? threadRows.map(email => (
-                <TableRow
-                  key={(email.thread_id || '').trim() || email.id}
-                  hover
-                  onClick={() => {
-                    // Use Mongo email id only — Message-IDs in thread_id break in URL path segments.
-                    router.push(`/categories/${id}/thread/${email.id}`);
-                  }}
-                  sx={{
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
-                  }}
-                >
-                  <TableCell sx={{ color: 'white' }}>{email.subject || '(no subject)'}</TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>{email.sender}</TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>{formatDate(email.date || email.created_at)}</TableCell>
-                  <TableCell>
-                    <SeverityChip severity={email.severity} />
-                  </TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>
-                    {email.assigned_to_name || '—'}
-                  </TableCell>
-                  <TableCell>
-                    <CaseStatusChip caseStatus={email.case_status} />
-                  </TableCell>
-                </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={6} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
-                    No threads in this category yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <ThreadTable
+          rows={threadRows}
+          rowKey={e => (e.thread_id || '').trim() || e.id}
+          onRowClick={e => router.push(`/categories/${id}/thread/${e.id}`)}
+          emptyMessage="No threads in this category yet."
+          columns={[
+            {
+              key: 'subject',
+              header: 'Subject',
+              cellSx: { color: 'white' },
+              render: e => e.subject || '(no subject)',
+            },
+            {
+              key: 'from',
+              header: 'From',
+              cellSx: { color: 'text.secondary' },
+              render: e => e.sender,
+            },
+            {
+              key: 'lastActivity',
+              header: 'Last activity',
+              cellSx: { color: 'text.secondary' },
+              render: e => (
+                <Tooltip title={formatAbsoluteDateTime(e.date || e.created_at)}>
+                  <span>{formatRelativeTime(e.date || e.created_at)}</span>
+                </Tooltip>
+              ),
+            },
+            {
+              key: 'severity',
+              header: 'Severity',
+              render: e => <SeverityChip severity={e.severity} />,
+            },
+            {
+              key: 'assignedTo',
+              header: 'Assigned to',
+              cellSx: { color: 'text.secondary' },
+              render: e => e.assigned_to_name || '—',
+            },
+            {
+              key: 'status',
+              header: 'Status',
+              render: e => <CaseStatusChip caseStatus={e.case_status} />,
+            },
+          ]}
+        />
       )}
     </DashboardLayout>
   );

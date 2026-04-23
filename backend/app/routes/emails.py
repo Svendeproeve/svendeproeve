@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from email.mime.text import MIMEText
-from email.utils import formatdate, make_msgid
+from email.utils import formataddr, formatdate, make_msgid
 import hashlib
 import imaplib
 import os
@@ -422,14 +422,23 @@ def list_my_assigned_threads(
         emails_collection.find({"org_id": org_id, "thread_id": {"$in": thread_ids}})
         .sort("created_at", 1)
     )
-    seen: set[str] = set()
-    first_per_thread: list[dict[str, Any]] = []
+    earliest_subject: dict[str, str] = {}
+    latest_per_thread: dict[str, dict[str, Any]] = {}
     for d in docs:
         tid = (d.get("thread_id") or "").strip()
-        if tid not in seen:
-            seen.add(tid)
-            first_per_thread.append(d)
-    return _emails_to_out(org_id, first_per_thread)
+        if not tid:
+            continue
+        if tid not in earliest_subject:
+            earliest_subject[tid] = d.get("subject") or ""
+        latest_per_thread[tid] = d
+
+    rows = []
+    for tid, latest in latest_per_thread.items():
+        row = dict(latest)
+        row["subject"] = earliest_subject.get(tid, latest.get("subject") or "")
+        rows.append(row)
+    rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    return _emails_to_out(org_id, rows)
 
 
 @router.get("", response_model=list[EmailOut])
@@ -812,6 +821,8 @@ def reply_to_thread(
         references.append(reply_to_mid)
 
     from_addr = account.get("smtp_username", "")
+    display_name = (current_user.get("full_name") or "").strip()
+    from_header = formataddr((display_name, from_addr)) if display_name else from_addr
     latest_inbound = next(
         (e for e in reversed(thread_emails) if not e.get("is_outbound") and not e.get("is_internal_note")),
         None,
@@ -832,7 +843,7 @@ def reply_to_thread(
 
     if not payload.internal_note:
         msg = MIMEText(payload.body, "plain", "utf-8")
-        msg["From"] = from_addr
+        msg["From"] = from_header
         msg["To"] = to_addr
         msg["Subject"] = subject
         msg["Date"] = formatdate(localtime=True)
@@ -854,7 +865,7 @@ def reply_to_thread(
         "dedupe_key": f"mid:{new_message_id}",
         "message_id": new_message_id,
         "thread_id": canonical_tid,
-        "from": from_addr,
+        "from": (display_name or from_addr) if payload.internal_note else from_header,
         "to": to_addr,
         "date": now.isoformat(),
         "subject": subject,

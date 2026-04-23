@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Box, TextField, Button, Typography, Link, Alert } from '@mui/material';
+import { Box, TextField, Button, Typography, Link } from '@mui/material';
 import NextLink from 'next/link';
 import { authApi } from '@/lib/api/auth';
 import { useSnackbar } from '@/contexts/SnackbarContext';

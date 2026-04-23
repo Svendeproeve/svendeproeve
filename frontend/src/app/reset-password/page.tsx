@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { Box, TextField, Button, Typography, Link, Alert } from '@mui/material';
+import { Box, TextField, Button, Typography, Link } from '@mui/material';
 import NextLink from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi } from '@/lib/api/auth';
