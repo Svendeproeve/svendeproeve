@@ -7,6 +7,7 @@ from app.routes.filters import router as filters_router
 from app.routes.categories import router as categories_router
 from app.routes.mail_accounts import router as mail_accounts_router
 from app.routes.organizations import router as organizations_router
+from app.routes.users import router as users_router
 
 app = FastAPI(title="Sortr Backend API", version="0.1.0")
 
@@ -28,6 +29,7 @@ app.add_middleware(
     expose_headers=["*"],
 )
 app.include_router(auth_router)
+app.include_router(users_router)
 app.include_router(organizations_router)
 app.include_router(mail_accounts_router)
 app.include_router(emails_router)

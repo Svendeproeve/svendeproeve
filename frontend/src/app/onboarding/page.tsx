@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations, setStoredOrgId, getStoredOrgId } from '@/hooks/useOrganizations';
 import { organizationApi } from '@/lib/api';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -13,9 +14,9 @@ export default function OnboardingPage() {
   const forceSwitch = searchParams.get('switch') === 'true';
   const { token, isAuthenticated, isLoading: authLoading } = useAuth();
   const { organizations, isLoading: isLoadingOrgs, mutate } = useOrganizations();
+  const { showSnackbar } = useSnackbar();
 
   const [orgName, setOrgName] = useState('');
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -34,20 +35,19 @@ export default function OnboardingPage() {
 
   const handleCreateOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
     if (!orgName.trim()) {
-      setError('Organization name is required');
+      showSnackbar('Organization name is required', 'error');
       return;
     }
 
     if (orgName.length < 2) {
-      setError('Organization name must be at least 2 characters');
+      showSnackbar('Organization name must be at least 2 characters', 'error');
       return;
     }
 
     if (!token) {
-      setError('Not authenticated');
+      showSnackbar('Not authenticated', 'error');
       return;
     }
 
@@ -61,7 +61,7 @@ export default function OnboardingPage() {
       setShowCreateForm(false);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to create organization');
+      showSnackbar(err.message || 'Failed to create organization', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -123,12 +123,6 @@ export default function OnboardingPage() {
           maxWidth: 600,
         }}
       >
-        {error && (
-          <Alert severity="error" data-testid="onboarding-error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
         {/* Organization List */}
         {hasOrganizations && (
           <Card sx={{ mb: 3, bgcolor: '#2c2c2c' }}>
@@ -235,7 +229,6 @@ export default function OnboardingPage() {
                     onClick={() => {
                       setShowCreateForm(false);
                       setOrgName('');
-                      setError('');
                     }}
                     disabled={isLoading}
                     sx={{

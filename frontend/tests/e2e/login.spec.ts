@@ -25,13 +25,18 @@ test.describe("Login Flow", () => {
     await page.getByTestId("login-password-input").fill("wrongpassword");
     await page.getByTestId("login-submit-button").click();
 
-    await expect(page.getByTestId("login-error")).toBeVisible();
+    const snackbar = page.locator('.MuiSnackbar-root');
+    await expect(snackbar).toBeVisible();
+    await expect(snackbar.locator('.MuiAlert-message')).toContainText(/Login failed|Invalid credentials/i);
   });
 
   test("should show validation error when fields are empty", async ({
     page,
   }) => {
     await page.getByTestId("login-submit-button").click();
-    await expect(page.getByTestId("login-error")).toBeVisible();
+
+    const snackbar = page.locator('.MuiSnackbar-root');
+    await expect(snackbar).toBeVisible();
+    await expect(snackbar.locator('.MuiAlert-message')).toContainText('All fields are required');
   });
 });

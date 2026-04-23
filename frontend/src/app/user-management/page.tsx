@@ -38,24 +38,23 @@ import { useOrganizations } from '@/hooks/useOrganizations';
 import { useCategories } from '@/hooks/useCategories';
 import { organizationApi, Member, InviteMemberData, categoryApi } from '@/lib/api';
 import useSWR from 'swr';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 export default function UserManagementPage() {
   const router = useRouter();
   const { isAuthenticated, user, token } = useAuth();
   const { organizations, currentOrg, isLoading: isLoadingOrgs } = useOrganizations();
   const { categories } = useCategories();
+  const { showSnackbar } = useSnackbar();
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'member'>('member');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isInviting, setIsInviting] = useState(false);
 
   const [accessMember, setAccessMember] = useState<Member | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
   const [isSavingAccess, setIsSavingAccess] = useState(false);
-  const [accessError, setAccessError] = useState('');
 
   const { data: members, mutate, isLoading: isLoadingMembers } = useSWR<Member[]>(
     currentOrg && token ? ['members', currentOrg.id, token] : null,
@@ -80,21 +79,19 @@ export default function UserManagementPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
 
     if (!email.trim()) {
-      setError('Email is required');
+      showSnackbar('Email is required', 'error');
       return;
     }
     if (!currentOrg || !token) {
-      setError('No organization selected');
+      showSnackbar('No organization selected', 'error');
       return;
     }
 
     const normalized = email.trim().toLowerCase();
     if (members?.some(m => m.user_email.toLowerCase() === normalized)) {
-      setError('That user is already a member of this organization');
+      showSnackbar('That user is already a member of this organization', 'error');
       return;
     }
 
@@ -103,11 +100,12 @@ export default function UserManagementPage() {
       const data: InviteMemberData = { email: email.toLowerCase(), role };
       await organizationApi.inviteMember(currentOrg.id, data, token);
       await mutate();
+      const invitedEmail = email;
       setEmail('');
       setRole('member');
-      setSuccess(`Successfully invited ${email} as ${role}`);
+      showSnackbar(`Successfully invited ${invitedEmail} as ${role}`, 'success');
     } catch (err: any) {
-      setError(err.message || 'Failed to invite member');
+      showSnackbar(err.message || 'Failed to invite member', 'error');
     } finally {
       setIsInviting(false);
     }
@@ -116,7 +114,6 @@ export default function UserManagementPage() {
   const openAccessDialog = async (member: Member) => {
     if (!currentOrg || !token) return;
     setAccessMember(member);
-    setAccessError('');
     setIsLoadingAccess(true);
     try {
       const ids = await categoryApi.getMemberAccess(currentOrg.id, member.user_id, token);
@@ -137,12 +134,12 @@ export default function UserManagementPage() {
   const handleSaveAccess = async () => {
     if (!accessMember || !currentOrg || !token) return;
     setIsSavingAccess(true);
-    setAccessError('');
     try {
       await categoryApi.setMemberAccess(currentOrg.id, accessMember.user_id, selectedCategoryIds, token);
       setAccessMember(null);
+      showSnackbar('Category access updated successfully', 'success');
     } catch (err: any) {
-      setAccessError(err.message || 'Failed to update access');
+      showSnackbar(err.message || 'Failed to update access', 'error');
     } finally {
       setIsSavingAccess(false);
     }
@@ -183,9 +180,6 @@ export default function UserManagementPage() {
           <Typography variant="h6" sx={{ mb: 3, color: 'white' }}>
             Invite Member
           </Typography>
-
-          {error && <Alert severity="error" sx={{ mb: 2 }} data-testid="invite-error">{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2 }} data-testid="invite-success">{success}</Alert>}
 
           <Box component="form" onSubmit={handleInvite}>
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
@@ -292,7 +286,6 @@ export default function UserManagementPage() {
           Category Access — {accessMember?.user_full_name || accessMember?.user_email}
         </DialogTitle>
         <DialogContent>
-          {accessError && <Alert severity="error" sx={{ mb: 2 }}>{accessError}</Alert>}
           {isLoadingAccess ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
               <CircularProgress size={24} />

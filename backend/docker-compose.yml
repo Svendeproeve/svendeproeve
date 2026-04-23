@@ -25,6 +25,17 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app/app
+    develop:
+      watch:
+        - action: sync
+          path: ./app
+          target: /app/app
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+            - "*.pyo"
+        - action: rebuild
+          path: requirements.txt
 
   poller:
     build:
@@ -52,6 +63,17 @@ services:
       # Enable only when you want automatic categorization on new emails.
       - OPENAI_AUTOCATEGORIZE=0
     command: ["python", "-u", "-m", "app.imap_poller"]
+    develop:
+      watch:
+        - action: sync
+          path: ./app
+          target: /app/app
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+            - "*.pyo"
+        - action: rebuild
+          path: requirements.txt
 
 volumes:
   mongo_data:

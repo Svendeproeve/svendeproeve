@@ -33,6 +33,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { mailAccountApi, MailAccount, MailAccountCreateData, MailAccountUpdateData, organizationApi, Member } from '@/lib/api';
 import useSWR from 'swr';
+import { useSnackbar } from '@/contexts/SnackbarContext';
 
 const DEFAULT_FORM: MailAccountCreateData = {
   name: '',
@@ -52,6 +53,7 @@ export default function MailAccountManagementPage() {
   const router = useRouter();
   const { isAuthenticated, user, token, isLoading: isLoadingAuth } = useAuth();
   const { organizations, currentOrg, isLoading: isLoadingOrgs } = useOrganizations();
+  const { showSnackbar } = useSnackbar();
 
   const { data: mailAccounts, isLoading: isLoadingAccounts, mutate } = useSWR<MailAccount[]>(
     currentOrg && token ? ['mail-accounts', currentOrg.id, token] : null,
@@ -68,8 +70,6 @@ export default function MailAccountManagementPage() {
   const currentUserRole = members?.find(m => m.user_id === user?.id)?.role;
 
   const [form, setForm] = useState<MailAccountCreateData>(DEFAULT_FORM);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
@@ -79,7 +79,6 @@ export default function MailAccountManagementPage() {
   const [editAccount, setEditAccount] = useState<MailAccount | null>(null);
   const [editForm, setEditForm] = useState<MailAccountUpdateData>({});
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [editError, setEditError] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState<MailAccount | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -157,19 +156,18 @@ export default function MailAccountManagementPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     if (!currentOrg || !token) return;
     setIsSubmitting(true);
     try {
       await mailAccountApi.create(currentOrg.id, form, token);
       await mutate();
+      const accountName = form.name;
       setForm(DEFAULT_FORM);
       setTestResult(null);
       setSmtpTestResult(null);
-      setSuccess(`Mail account "${form.name}" added`);
+      showSnackbar(`Mail account "${accountName}" added`, 'success');
     } catch (err: any) {
-      setError(err.message || 'Failed to create mail account');
+      showSnackbar(err.message || 'Failed to create mail account', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -188,22 +186,21 @@ export default function MailAccountManagementPage() {
       smtp_username: account.smtp_username,
       smtp_use_ssl: account.smtp_use_ssl,
     });
-    setEditError('');
   };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editAccount || !currentOrg || !token) return;
     setIsEditSubmitting(true);
-    setEditError('');
     try {
       await mailAccountApi.update(currentOrg.id, editAccount.id, editForm, token);
       const updatedId = editAccount.id;
       await mutate();
       setEditAccount(null);
       fetchAccountStatus(updatedId);
+      showSnackbar('Mail account updated successfully', 'success');
     } catch (err: any) {
-      setEditError(err.message || 'Failed to update mail account');
+      showSnackbar(err.message || 'Failed to update mail account', 'error');
     } finally {
       setIsEditSubmitting(false);
     }
@@ -216,8 +213,9 @@ export default function MailAccountManagementPage() {
       await mailAccountApi.delete(currentOrg.id, deleteTarget.id, token);
       await mutate();
       setDeleteTarget(null);
+      showSnackbar('Mail account deleted successfully', 'success');
     } catch (err: any) {
-      setError(err.message || 'Failed to delete mail account');
+      showSnackbar(err.message || 'Failed to delete mail account', 'error');
       setDeleteTarget(null);
     } finally {
       setIsDeleting(false);
@@ -245,9 +243,6 @@ export default function MailAccountManagementPage() {
       <Card sx={{ mb: 4, bgcolor: '#2c2c2c' }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 3, color: 'white' }}>Add Mail Account</Typography>
-
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
           <Box component="form" onSubmit={handleCreate}>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: 2, mb: 2 }}>
@@ -403,7 +398,6 @@ export default function MailAccountManagementPage() {
       <Dialog open={!!editAccount} onClose={() => setEditAccount(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Mail Account</DialogTitle>
         <DialogContent>
-          {editError && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{editError}</Alert>}
           <Box component="form" id="edit-mail-form" onSubmit={handleEdit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField
               label="Account Name"
