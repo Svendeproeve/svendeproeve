@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from email.mime.text import MIMEText
-from email.utils import formatdate, make_msgid
+from email.utils import formataddr, formatdate, make_msgid
 import hashlib
 import imaplib
 import os
@@ -812,6 +812,8 @@ def reply_to_thread(
         references.append(reply_to_mid)
 
     from_addr = account.get("smtp_username", "")
+    display_name = (current_user.get("full_name") or "").strip()
+    from_header = formataddr((display_name, from_addr)) if display_name else from_addr
     latest_inbound = next(
         (e for e in reversed(thread_emails) if not e.get("is_outbound") and not e.get("is_internal_note")),
         None,
@@ -832,7 +834,7 @@ def reply_to_thread(
 
     if not payload.internal_note:
         msg = MIMEText(payload.body, "plain", "utf-8")
-        msg["From"] = from_addr
+        msg["From"] = from_header
         msg["To"] = to_addr
         msg["Subject"] = subject
         msg["Date"] = formatdate(localtime=True)
@@ -854,7 +856,7 @@ def reply_to_thread(
         "dedupe_key": f"mid:{new_message_id}",
         "message_id": new_message_id,
         "thread_id": canonical_tid,
-        "from": from_addr,
+        "from": (display_name or from_addr) if payload.internal_note else from_header,
         "to": to_addr,
         "date": now.isoformat(),
         "subject": subject,
