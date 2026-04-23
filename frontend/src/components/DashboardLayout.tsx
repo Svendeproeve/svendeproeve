@@ -200,7 +200,7 @@ export default function DashboardLayout({ children, userName, userRole, contentS
         </List>
 
         <Box sx={{ mt: 'auto', p: 2 }}>
-          <Link href="/onboarding" style={{ textDecoration: 'none' }}>
+          <Link href="/onboarding?switch=true" style={{ textDecoration: 'none' }}>
             <Typography
               variant="caption"
               sx={{

@@ -112,6 +112,7 @@ export default function PricingPage() {
                   fontSize: "0.85rem",
                   "&:hover": { color: "white" },
                 }}
+                onClick={() => router.push("/about")}
               >
                 About
               </Typography>
