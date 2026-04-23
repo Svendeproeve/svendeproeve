@@ -17,13 +17,13 @@ export function formatRelativeTime(raw: string | null | undefined, now: Date = n
   if (diffSec < 60) return 'just now';
 
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return pluralize(diffMin, 'minute');
+  if (diffMin < 60) return `${diffMin}m ago`;
 
   const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) {
     const remMin = diffMin - diffHour * 60;
-    if (remMin === 0) return pluralize(diffHour, 'hour');
-    return `${diffHour} hour${diffHour === 1 ? '' : 's'} ${remMin} minute${remMin === 1 ? '' : 's'} ago`;
+    if (remMin === 0) return `${diffHour}h ago`;
+    return `${diffHour}h ${remMin}m ago`;
   }
 
   const diffDay = Math.floor(diffHour / 24);
