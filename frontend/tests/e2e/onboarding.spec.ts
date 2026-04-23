@@ -33,7 +33,9 @@ test.describe("Onboarding Flow", () => {
     await page.getByTestId("onboarding-org-name-input").fill("A");
     await page.getByTestId("onboarding-create-org-button").click();
 
-    await expect(page.getByTestId("onboarding-error")).toBeVisible();
+    const snackbar = page.locator('.MuiSnackbar-root');
+    await expect(snackbar).toBeVisible();
+    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Organization name must be at least 2 characters');
   });
 
   test("should show error when organization name is empty", async ({
@@ -42,6 +44,8 @@ test.describe("Onboarding Flow", () => {
     await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-create-org-button").click();
 
-    await expect(page.getByTestId("onboarding-error")).toBeVisible();
+    const snackbar = page.locator('.MuiSnackbar-root');
+    await expect(snackbar).toBeVisible();
+    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Organization name is required');
   });
 });

@@ -244,9 +244,18 @@ export default function DashboardLayout({ children, userName, userRole, contentS
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {userName && (
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                {userName}
-              </Typography>
+              <Link href="/account-settings" style={{ textDecoration: 'none' }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                    cursor: 'pointer',
+                    '&:hover': { color: 'white' },
+                  }}
+                >
+                  {userName}
+                </Typography>
+              </Link>
             )}
             <IconButton
               size="small"

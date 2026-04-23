@@ -40,7 +40,9 @@ test.describe("Registration Flow", () => {
     await page.getByTestId("register-confirm-password-input").fill("short");
     await page.getByTestId("register-submit-button").click();
 
-    await expect(page.getByTestId("register-error")).toBeVisible();
+    const snackbar = page.locator('.MuiSnackbar-root');
+    await expect(snackbar).toBeVisible();
+    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Password must be at least 8 characters');
   });
 
   test("should show validation error for password mismatch", async ({ page }) => {
@@ -53,6 +55,8 @@ test.describe("Registration Flow", () => {
     await page.getByTestId("register-confirm-password-input").fill("different123");
     await page.getByTestId("register-submit-button").click();
 
-    await expect(page.getByTestId("register-error")).toBeVisible();
+    const snackbar = page.locator('.MuiSnackbar-root');
+    await expect(snackbar).toBeVisible();
+    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Passwords do not match');
   });
 });
