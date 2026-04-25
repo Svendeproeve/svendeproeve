@@ -62,3 +62,7 @@ export async function getAuthUser(page: Page): Promise<any> {
     return userStr ? JSON.parse(userStr) : null;
   });
 }
+
+export async function getOrgId(page: Page): Promise<string | null> {
+  return await page.evaluate(() => localStorage.getItem('current_org_id'));
+}

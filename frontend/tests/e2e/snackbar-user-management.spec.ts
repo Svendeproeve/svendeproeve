@@ -15,6 +15,7 @@ test.describe('User Management Snackbar Notifications', () => {
     await expect(page).toHaveURL('/dashboard', { timeout: 15000 });
 
     await page.goto('/user-management');
+    await expect(page.getByRole('heading', { name: 'User Management' })).toBeVisible({ timeout: 15000 });
   });
 
   test('Shows snackbar on missing email validation', async ({ page }) => {
@@ -39,31 +40,28 @@ test.describe('User Management Snackbar Notifications', () => {
 
     const snackbar = page.locator('.MuiSnackbar-root');
     await expect(snackbar).toBeVisible();
-    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Successfully invited');
+    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Invitation sent to');
     await expect(snackbar.locator('.MuiAlert-root')).toHaveAttribute('class', /MuiAlert-standardSuccess/);
 
     await expect(page.getByTestId('invite-email-input')).toHaveValue('');
     await expect(page.getByTestId('invite-role-select')).toContainText('Member');
   });
 
-  test('Shows snackbar when inviting duplicate user', async ({ page, request }) => {
-    const duplicateUser = generateTestUser('duplicate-member');
-    await request.post(`${API_URL}/auth/signup`, {
-      data: { email: duplicateUser.email, password: duplicateUser.password, full_name: duplicateUser.fullName },
-    });
+  test('Re-inviting a pending email refreshes the invite', async ({ page }) => {
+    const pendingUser = generateTestUser('pending-reinvite');
 
-    await page.getByTestId('invite-email-input').fill(duplicateUser.email);
+    await page.getByTestId('invite-email-input').fill(pendingUser.email);
     await page.getByTestId('invite-submit-button').click();
 
     await page.locator('.MuiSnackbar-root').waitFor({ state: 'visible' });
     await page.locator('.MuiSnackbar-root').waitFor({ state: 'hidden', timeout: 7000 });
 
-    await page.getByTestId('invite-email-input').fill(duplicateUser.email);
+    await page.getByTestId('invite-email-input').fill(pendingUser.email);
     await page.getByTestId('invite-submit-button').click();
 
     const snackbar = page.locator('.MuiSnackbar-root');
     await expect(snackbar).toBeVisible();
-    await expect(snackbar.locator('.MuiAlert-message')).toContainText('already a member');
+    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Invitation sent to');
   });
 
   test('Shows snackbar on invitation error', async ({ page }) => {
@@ -86,7 +84,7 @@ test.describe('User Management Snackbar Notifications', () => {
 
     const snackbar = page.locator('.MuiSnackbar-root');
     await expect(snackbar).toBeVisible();
-    await expect(snackbar.locator('.MuiAlert-message')).toContainText(/invited|admin/i);
+    await expect(snackbar.locator('.MuiAlert-message')).toContainText(/Invitation sent to/i);
   });
 
   test('Shows snackbar on successful category access update', async ({ page }) => {
@@ -125,7 +123,7 @@ test.describe('User Management Snackbar Notifications', () => {
   });
 
   test('Member list displays correctly', async ({ page }) => {
-    await expect(page.getByRole('columnheader', { name: 'Name', exact: true })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Name', exact: true })).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole('columnheader', { name: 'Email', exact: true })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Role', exact: true })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Joined', exact: true })).toBeVisible();

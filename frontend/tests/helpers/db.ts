@@ -18,3 +18,15 @@ export async function getPasswordResetToken(email: string): Promise<string | nul
     await client.close();
   }
 }
+
+export async function getOrgInviteToken(email: string): Promise<string | null> {
+  const { mongoUri, dbName } = getDbInfo();
+  const client = new MongoClient(mongoUri);
+  try {
+    await client.connect();
+    const invite = await client.db(dbName).collection('org_invitations').findOne({ email: email.toLowerCase() });
+    return invite?.token ?? null;
+  } finally {
+    await client.close();
+  }
+}

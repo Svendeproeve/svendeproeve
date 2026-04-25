@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { Box, TextField, Button, Typography, Link, CircularProgress, Chip } from '@mui/material';
 import NextLink from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { mutate as swrMutate } from 'swr';
 import { invitationApi, OrgInvitationPreview, authApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -70,6 +71,7 @@ function AcceptInviteContent() {
       const response = await authApi.signin({ email, password });
       localStorage.setItem('auth_token', response.access_token);
       localStorage.setItem('auth_user', JSON.stringify(response.user));
+      await swrMutate('auth_user', response.user, { revalidate: false });
       await invitationApi.accept(token, response.access_token);
       showSnackbar(`You've joined ${invite!.org_name}!`, 'success');
       router.push('/dashboard');
@@ -87,6 +89,7 @@ function AcceptInviteContent() {
       const response = await invitationApi.acceptAndRegister(token, { full_name: fullName, password });
       localStorage.setItem('auth_token', response.access_token);
       localStorage.setItem('auth_user', JSON.stringify(response.user));
+      await swrMutate('auth_user', response.user, { revalidate: false });
       showSnackbar(`Account created! Welcome to ${invite!.org_name}.`, 'success');
       router.push('/dashboard');
     } catch (err: any) {
@@ -130,14 +133,16 @@ function AcceptInviteContent() {
         {invite && (
           <>
             {/* Invite summary */}
-            <Box sx={{ mb: 4, p: 3, bgcolor: '#2c2c2c', borderRadius: 2, textAlign: 'center' }}>
+            <Box data-testid="invite-preview" sx={{ mb: 4, p: 3, bgcolor: '#2c2c2c', borderRadius: 2, textAlign: 'center' }}>
               <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
                 {invite.invited_by_email} invited you to join
               </Typography>
-              <Typography variant="h5" sx={{ color: 'white', fontWeight: 700, mb: 1 }}>
+              <Typography data-testid="invite-org-name" variant="h5" sx={{ color: 'white', fontWeight: 700, mb: 1 }}>
                 {invite.org_name}
               </Typography>
-              <Chip label={invite.role.toUpperCase()} sx={{ bgcolor: roleColor, color: 'white', fontWeight: 600 }} />
+              <span data-testid="invite-role-chip">
+                <Chip label={invite.role.toUpperCase()} sx={{ bgcolor: roleColor, color: 'white', fontWeight: 600 }} />
+              </span>
             </Box>
 
             {/* Already logged in as correct user */}
@@ -146,10 +151,10 @@ function AcceptInviteContent() {
                 <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary', textAlign: 'center' }}>
                   Logged in as <strong style={{ color: 'white' }}>{user.email}</strong>
                 </Typography>
-                <Button fullWidth variant="contained" onClick={handleAccept} disabled={isSubmitting} sx={{ py: 1.5, fontWeight: 600, textTransform: 'none', mb: 1.5 }}>
+                <Button data-testid="accept-invite-accept-button" fullWidth variant="contained" onClick={handleAccept} disabled={isSubmitting} sx={{ py: 1.5, fontWeight: 600, textTransform: 'none', mb: 1.5 }}>
                   {isSubmitting ? 'Accepting...' : 'Accept Invitation'}
                 </Button>
-                <Button fullWidth variant="text" onClick={handleDecline} disabled={isSubmitting} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+                <Button data-testid="accept-invite-decline-button" fullWidth variant="text" onClick={handleDecline} disabled={isSubmitting} sx={{ textTransform: 'none', color: 'text.secondary' }}>
                   Decline
                 </Button>
               </>
@@ -157,7 +162,7 @@ function AcceptInviteContent() {
 
             {/* Logged in as wrong account */}
             {user && user.email !== invite.invited_email && (
-              <Typography variant="body2" sx={{ color: '#f44336', textAlign: 'center' }}>
+              <Typography data-testid="accept-invite-wrong-account" variant="body2" sx={{ color: '#f44336', textAlign: 'center' }}>
                 This invitation was sent to <strong>{invite.invited_email}</strong>. Please log out and use that account.
               </Typography>
             )}
@@ -169,13 +174,13 @@ function AcceptInviteContent() {
                   Log in to accept
                 </Typography>
                 <Typography variant="body1" sx={{ mb: 1, color: 'white', fontWeight: 500 }}>Email</Typography>
-                <TextField fullWidth type="email" placeholder={invite.invited_email} value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubmitting} sx={{ mb: 2 }} />
+                <TextField fullWidth type="email" placeholder={invite.invited_email} value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubmitting} inputProps={{ 'data-testid': 'accept-invite-email-input' }} sx={{ mb: 2 }} />
                 <Typography variant="body1" sx={{ mb: 1, color: 'white', fontWeight: 500 }}>Password</Typography>
-                <TextField fullWidth type="password" placeholder="••••••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} sx={{ mb: 3 }} />
-                <Button fullWidth type="submit" variant="contained" disabled={isSubmitting} sx={{ py: 1.5, fontWeight: 600, textTransform: 'none', mb: 1.5 }}>
+                <TextField fullWidth type="password" placeholder="••••••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} inputProps={{ 'data-testid': 'accept-invite-password-input' }} sx={{ mb: 3 }} />
+                <Button data-testid="accept-invite-login-submit-button" fullWidth type="submit" variant="contained" disabled={isSubmitting} sx={{ py: 1.5, fontWeight: 600, textTransform: 'none', mb: 1.5 }}>
                   {isSubmitting ? 'Logging in...' : 'Log In & Accept'}
                 </Button>
-                <Button fullWidth variant="text" onClick={handleDecline} disabled={isSubmitting} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+                <Button data-testid="accept-invite-decline-button" fullWidth variant="text" onClick={handleDecline} disabled={isSubmitting} sx={{ textTransform: 'none', color: 'text.secondary' }}>
                   Decline
                 </Button>
               </Box>
@@ -188,15 +193,15 @@ function AcceptInviteContent() {
                   Create your account to join
                 </Typography>
                 <Typography variant="body1" sx={{ mb: 1, color: 'white', fontWeight: 500 }}>Full Name</Typography>
-                <TextField fullWidth placeholder="Your name" value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={isSubmitting} sx={{ mb: 2 }} />
+                <TextField fullWidth placeholder="Your name" value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={isSubmitting} inputProps={{ 'data-testid': 'accept-invite-fullname-input' }} sx={{ mb: 2 }} />
                 <Typography variant="body1" sx={{ mb: 1, color: 'white', fontWeight: 500 }}>Email</Typography>
                 <TextField fullWidth value={invite.invited_email} disabled sx={{ mb: 2 }} />
                 <Typography variant="body1" sx={{ mb: 1, color: 'white', fontWeight: 500 }}>Password</Typography>
-                <TextField fullWidth type="password" placeholder="••••••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} sx={{ mb: 3 }} />
-                <Button fullWidth type="submit" variant="contained" disabled={isSubmitting} sx={{ py: 1.5, fontWeight: 600, textTransform: 'none', mb: 1.5 }}>
+                <TextField fullWidth type="password" placeholder="••••••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} inputProps={{ 'data-testid': 'accept-invite-register-password-input' }} sx={{ mb: 3 }} />
+                <Button data-testid="accept-invite-register-submit-button" fullWidth type="submit" variant="contained" disabled={isSubmitting} sx={{ py: 1.5, fontWeight: 600, textTransform: 'none', mb: 1.5 }}>
                   {isSubmitting ? 'Creating account...' : 'Create Account & Accept'}
                 </Button>
-                <Button fullWidth variant="text" onClick={handleDecline} disabled={isSubmitting} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+                <Button data-testid="accept-invite-decline-button" fullWidth variant="text" onClick={handleDecline} disabled={isSubmitting} sx={{ textTransform: 'none', color: 'text.secondary' }}>
                   Decline
                 </Button>
               </Box>
