@@ -93,16 +93,24 @@ export default function OnboardingPage() {
       }}
     >
       <Typography
-        variant="h1"
+        variant="h6"
         data-testid="onboarding-welcome-title"
+        sx={{ mb: 0.5, color: 'white' }}
+      >
+        Welcome to
+      </Typography>
+      <Typography
+        variant="h1"
         sx={{
-          fontSize: '4rem',
-          
+          fontFamily: 'var(--font-inria-serif), serif',
+          fontWeight: 700,
+          letterSpacing: '-0.15em',
+          fontSize: '3rem',
           mb: 2,
           color: 'white',
         }}
       >
-        Welcome to Sortr
+        Sortr
       </Typography>
 
       <Typography

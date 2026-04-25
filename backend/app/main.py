@@ -5,6 +5,7 @@ from app.routes.auth import router as auth_router
 from app.routes.emails import router as emails_router
 from app.routes.filters import router as filters_router
 from app.routes.categories import router as categories_router
+from app.routes.invitations import router as invitations_router
 from app.routes.mail_accounts import router as mail_accounts_router
 from app.routes.organizations import router as organizations_router
 from app.routes.users import router as users_router
@@ -31,6 +32,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(organizations_router)
+app.include_router(invitations_router)
 app.include_router(mail_accounts_router)
 app.include_router(emails_router)
 app.include_router(categories_router)

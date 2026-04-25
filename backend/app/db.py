@@ -41,3 +41,8 @@ emails_collection.create_index([("org_id", 1), ("category_id", 1)])
 thread_cases_collection = db["thread_cases"]
 thread_cases_collection.create_index([("org_id", 1), ("thread_id", 1)], unique=True)
 thread_cases_collection.create_index([("org_id", 1), ("status", 1)])
+
+org_invitations_collection = db["org_invitations"]
+org_invitations_collection.create_index([("org_id", 1), ("email", 1)], unique=True)
+org_invitations_collection.create_index("token", unique=True)
+org_invitations_collection.create_index("expires_at")

@@ -29,13 +29,14 @@ import {
   FormControlLabel,
   FormGroup,
 } from '@mui/material';
-import { IoKey } from 'react-icons/io5';
+import { IoKey, IoTrashOutline } from 'react-icons/io5';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/hooks/useOrganizations';
 import { useCategories } from '@/hooks/useCategories';
 import { organizationApi, Member, InviteMemberData, categoryApi } from '@/lib/api';
+import { SelectChangeEvent } from '@mui/material';
 import useSWR from 'swr';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 
@@ -49,6 +50,8 @@ export default function UserManagementPage() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'member'>('member');
   const [isInviting, setIsInviting] = useState(false);
+  const [updatingRoleFor, setUpdatingRoleFor] = useState<string | null>(null);
+  const [removingMember, setRemovingMember] = useState<string | null>(null);
 
   const [accessMember, setAccessMember] = useState<Member | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
@@ -76,6 +79,34 @@ export default function UserManagementPage() {
     }
   }, [isAuthenticated, isLoadingAuth, organizations, isLoadingOrgs, members, currentUserRole, router]);
 
+  const handleRemoveMember = async (member: Member) => {
+    if (!currentOrg || !token) return;
+    setRemovingMember(member.user_id);
+    try {
+      await organizationApi.removeMember(currentOrg.id, member.user_id, token);
+      await mutate();
+      showSnackbar(`${member.user_email} has been removed`, 'success');
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to remove member', 'error');
+    } finally {
+      setRemovingMember(null);
+    }
+  };
+
+  const handleRoleChange = async (member: Member, newRole: 'admin' | 'member') => {
+    if (!currentOrg || !token) return;
+    setUpdatingRoleFor(member.user_id);
+    try {
+      await organizationApi.updateMemberRole(currentOrg.id, member.user_id, newRole, token);
+      await mutate();
+      showSnackbar(`Role updated to ${newRole}`, 'success');
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to update role', 'error');
+    } finally {
+      setUpdatingRoleFor(null);
+    }
+  };
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -98,11 +129,10 @@ export default function UserManagementPage() {
     try {
       const data: InviteMemberData = { email: email.toLowerCase(), role };
       await organizationApi.inviteMember(currentOrg.id, data, token);
-      await mutate();
       const invitedEmail = email;
       setEmail('');
       setRole('member');
-      showSnackbar(`Successfully invited ${invitedEmail} as ${role}`, 'success');
+      showSnackbar(`Invitation sent to ${invitedEmail}`, 'success');
     } catch (err: any) {
       showSnackbar(err.message || 'Failed to invite member', 'error');
     } finally {
@@ -233,6 +263,7 @@ export default function UserManagementPage() {
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Role</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Joined</TableCell>
               <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Category Access</TableCell>
+              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }} />
             </TableRow>
           </TableHead>
           <TableBody>
@@ -242,10 +273,25 @@ export default function UserManagementPage() {
                   <TableCell sx={{ color: 'white' }}>{member.user_full_name || 'N/A'}</TableCell>
                   <TableCell sx={{ color: 'white' }}>{member.user_email}</TableCell>
                   <TableCell>
-                    <Chip
-                      label={member.role.toUpperCase()}
-                      sx={{ bgcolor: getRoleColor(member.role), color: 'white', fontWeight: 600 }}
-                    />
+                    {member.role === 'owner' || member.user_id === user?.id || (currentUserRole === 'admin' && member.role === 'admin') ? (
+                      <Chip
+                        label={member.role.toUpperCase()}
+                        sx={{ bgcolor: getRoleColor(member.role), color: 'white', fontWeight: 600 }}
+                      />
+                    ) : (
+                      <Select
+                        size="small"
+                        value={member.role}
+                        disabled={updatingRoleFor === member.user_id}
+                        onChange={(e: SelectChangeEvent) =>
+                          handleRoleChange(member, e.target.value as 'admin' | 'member')
+                        }
+                        sx={{ minWidth: 110, color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: getRoleColor(member.role) } }}
+                      >
+                        <MenuItem value="member">Member</MenuItem>
+                        <MenuItem value="admin">Admin</MenuItem>
+                      </Select>
+                    )}
                   </TableCell>
                   <TableCell sx={{ color: 'white' }}>
                     {new Date(member.created_at).toLocaleDateString()}
@@ -266,11 +312,26 @@ export default function UserManagementPage() {
                       </IconButton>
                     )}
                   </TableCell>
+                  <TableCell align="right">
+                    {member.role !== 'owner' &&
+                      member.user_id !== user?.id &&
+                      !(currentUserRole === 'admin' && member.role === 'admin') && (
+                      <IconButton
+                        size="small"
+                        sx={{ color: 'error.main' }}
+                        onClick={() => handleRemoveMember(member)}
+                        disabled={removingMember === member.user_id}
+                        title="Remove member"
+                      >
+                        <IoTrashOutline size={18} />
+                      </IconButton>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+                <TableCell colSpan={6} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
                   No members found
                 </TableCell>
               </TableRow>

@@ -32,6 +32,5 @@ def decode_access_token(token: str) -> dict:
         raise ValueError("Invalid token") from exc
 
 
-def generate_reset_token() -> str:
-    """Generate a secure random token for password reset"""
+def generate_secure_token() -> str:
     return secrets.token_urlsafe(32)

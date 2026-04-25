@@ -19,12 +19,17 @@ class Settings:
     smtp_password: str = os.getenv("SMTP_PASSWORD", "")
     smtp_from_email: str = os.getenv("SMTP_FROM_EMAIL", "")
     smtp_from_name: str = os.getenv("SMTP_FROM_NAME", "Sortr")
+    # True = implicit SSL (port 465), False = STARTTLS (port 587)
+    smtp_use_tls: bool = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
 
     # Frontend URL for password reset links
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
     # Password reset token expiration (in minutes)
     password_reset_expire_minutes: int = int(os.getenv("PASSWORD_RESET_EXPIRE_MINUTES", "60"))
+
+    # Org invitation token expiration (in hours)
+    invite_token_expire_hours: int = int(os.getenv("INVITE_TOKEN_EXPIRE_HOURS", "72"))
 
 
 settings = Settings()

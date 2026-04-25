@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
 from app.config import settings
@@ -17,7 +17,7 @@ from app.schemas import (
 )
 from app.security import (
     create_access_token,
-    generate_reset_token,
+    generate_secure_token,
     hash_password,
     verify_password,
 )
@@ -79,7 +79,7 @@ def me(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
-async def forgot_password(payload: ForgotPasswordRequest):
+async def forgot_password(payload: ForgotPasswordRequest, background_tasks: BackgroundTasks):
     """
     Request a password reset email.
     Returns 200 even if email doesn't exist (security best practice).
@@ -91,7 +91,7 @@ async def forgot_password(payload: ForgotPasswordRequest):
         return {"message": "If the email exists, a password reset link has been sent"}
 
     # Generate reset token
-    reset_token = generate_reset_token()
+    reset_token = generate_secure_token()
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.password_reset_expire_minutes
     )
@@ -110,13 +110,8 @@ async def forgot_password(payload: ForgotPasswordRequest):
     # Generate reset link
     reset_link = f"{settings.frontend_url}/reset-password?token={reset_token}"
 
-    # Send email
     email_html = generate_password_reset_email(reset_link, user["email"])
-    await send_email(
-        to_email=user["email"],
-        subject="Password Reset Request",
-        html_content=email_html,
-    )
+    background_tasks.add_task(send_email, user["email"], "Password Reset Request", email_html)
 
     return {"message": "If the email exists, a password reset link has been sent"}
 

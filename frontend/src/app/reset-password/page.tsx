@@ -81,7 +81,10 @@ function ResetPasswordForm() {
       <Typography
         variant="h1"
         sx={{
-          fontSize: '4rem',
+          fontFamily: 'var(--font-inria-serif), serif',
+          fontWeight: 700,
+          letterSpacing: '-0.15em',
+          fontSize: '3rem',
           mb: 8,
           color: 'white',
         }}

@@ -54,7 +54,7 @@ export const organizationApi = {
     return res.json();
   },
 
-  inviteMember: async (orgId: string, data: InviteMemberData, token: string): Promise<Member> => {
+  inviteMember: async (orgId: string, data: InviteMemberData, token: string): Promise<{ message: string }> => {
     const res = await apiFetch(`/organizations/${orgId}/members/invite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -63,6 +63,31 @@ export const organizationApi = {
     if (!res.ok) {
       const error = await res.json();
       throw new Error(error.detail || 'Failed to invite member');
+    }
+    return res.json();
+  },
+
+  removeMember: async (orgId: string, userId: string, token: string): Promise<{ message: string }> => {
+    const res = await apiFetch(`/organizations/${orgId}/members/${userId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to remove member');
+    }
+    return res.json();
+  },
+
+  updateMemberRole: async (orgId: string, userId: string, role: 'admin' | 'member', token: string): Promise<Member> => {
+    const res = await apiFetch(`/organizations/${orgId}/members/${userId}/role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ role }),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to update role');
     }
     return res.json();
   },

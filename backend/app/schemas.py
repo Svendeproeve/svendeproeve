@@ -61,6 +61,23 @@ class InviteMemberRequest(BaseModel):
     role: Literal["admin", "member"] = "member"
 
 
+class UpdateMemberRoleRequest(BaseModel):
+    role: Literal["admin", "member"]
+
+
+class OrgInvitationPreview(BaseModel):
+    org_name: str
+    role: Literal["admin", "member"]
+    invited_email: str
+    invited_by_email: str
+    user_exists: bool
+
+
+class AcceptAndRegisterRequest(BaseModel):
+    full_name: Optional[str] = Field(default=None, max_length=120)
+    password: str = Field(min_length=8, max_length=128)
+
+
 class MailAccountCreateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     imap_host: str = Field(min_length=3, max_length=255)

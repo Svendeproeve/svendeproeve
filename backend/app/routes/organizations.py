@@ -1,15 +1,25 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
-from app.db import categories_collection, memberships_collection, organizations_collection, users_collection
+from app.config import settings
+from app.db import (
+    categories_collection,
+    memberships_collection,
+    org_invitations_collection,
+    organizations_collection,
+    users_collection,
+)
 from app.dependencies import get_current_user, require_org_admin, require_org_membership
+from app.email import generate_org_invite_email, send_email
 from app.schemas import (
     InviteMemberRequest,
     MembershipOut,
     OrganizationCreateRequest,
     OrganizationOut,
+    UpdateMemberRoleRequest,
 )
+from app.security import generate_secure_token
 from app.utils import parse_object_id
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -92,40 +102,108 @@ def list_members(org_id: str, current_user: dict = Depends(get_current_user)):
     ]
 
 
-@router.post("/{org_id}/members/invite", response_model=MembershipOut)
-def invite_existing_user(
+@router.post("/{org_id}/members/invite", status_code=status.HTTP_200_OK)
+async def invite_member(
     org_id: str,
     payload: InviteMemberRequest,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     require_org_admin(org_id, str(current_user["_id"]))
-    user = users_collection.find_one({"email": payload.email.lower()})
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User with that email does not exist",
-        )
 
-    existing = memberships_collection.find_one(
-        {"org_id": org_id, "user_id": str(user["_id"])}
-    )
-    if existing:
+    email = payload.email.lower()
+
+    # Reject if already a member
+    existing_user = users_collection.find_one({"email": email})
+    if existing_user and memberships_collection.find_one({"org_id": org_id, "user_id": str(existing_user["_id"])}):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User is already a member of this organization",
         )
 
-    membership = {
-        "org_id": org_id,
-        "user_id": str(user["_id"]),
-        "role": payload.role,
-        "created_at": datetime.now(timezone.utc),
-    }
-    memberships_collection.insert_one(membership)
-    return MembershipOut(
-        user_id=membership["user_id"],
-        user_email=user["email"],
-        user_full_name=user.get("full_name"),
-        role=membership["role"],
-        created_at=membership["created_at"],
+    org = organizations_collection.find_one({"_id": parse_object_id(org_id, "org_id")})
+
+    token = generate_secure_token()
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=settings.invite_token_expire_hours)
+
+    # Upsert: re-invite refreshes the token and expiry
+    org_invitations_collection.update_one(
+        {"org_id": org_id, "email": email},
+        {"$set": {
+            "role": payload.role,
+            "token": token,
+            "expires_at": expires_at,
+            "invited_by_user_id": str(current_user["_id"]),
+            "invited_by_email": current_user["email"],
+            "created_at": datetime.now(timezone.utc),
+        }},
+        upsert=True,
     )
+
+    invite_link = f"{settings.frontend_url}/accept-invite?token={token}"
+    email_html = generate_org_invite_email(invite_link, org["name"], current_user["email"], email)
+    background_tasks.add_task(send_email, email, f"You've been invited to join {org['name']} on Sortr", email_html)
+
+    return {"message": f"Invitation sent to {email}"}
+
+
+@router.patch("/{org_id}/members/{user_id}/role", response_model=MembershipOut)
+def update_member_role(
+    org_id: str,
+    user_id: str,
+    payload: UpdateMemberRoleRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    caller_membership = require_org_admin(org_id, str(current_user["_id"]))
+
+    target = memberships_collection.find_one({"org_id": org_id, "user_id": user_id})
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+
+    if target["role"] == "owner":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot change the owner's role")
+
+    if str(current_user["_id"]) == user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot change your own role")
+
+    if caller_membership["role"] == "admin" and target["role"] == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins cannot change other admins' roles")
+
+    memberships_collection.update_one(
+        {"org_id": org_id, "user_id": user_id},
+        {"$set": {"role": payload.role}},
+    )
+
+    user = users_collection.find_one({"_id": parse_object_id(user_id, "user_id")})
+    return MembershipOut(
+        user_id=user_id,
+        user_email=user["email"] if user else "unknown@example.com",
+        user_full_name=user.get("full_name") if user else None,
+        role=payload.role,
+        created_at=target["created_at"],
+    )
+
+
+@router.delete("/{org_id}/members/{user_id}", status_code=status.HTTP_200_OK)
+def remove_member(
+    org_id: str,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    caller_membership = require_org_admin(org_id, str(current_user["_id"]))
+
+    target = memberships_collection.find_one({"org_id": org_id, "user_id": user_id})
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+
+    if target["role"] == "owner":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The owner cannot be removed")
+
+    if str(current_user["_id"]) == user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot remove yourself")
+
+    if caller_membership["role"] == "admin" and target["role"] == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins cannot remove other admins")
+
+    memberships_collection.delete_one({"org_id": org_id, "user_id": user_id})
+    return {"message": "Member removed"}
