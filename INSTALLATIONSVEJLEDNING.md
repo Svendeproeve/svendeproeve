@@ -165,13 +165,13 @@ Dette kan tage et par minutter afhængigt af din internetforbindelse.
 
 ### Metode 1: Docker (Anbefalet)
 
-Dette er den nemmeste metode, da Docker håndterer både backend, database og IMAP-poller.
+Dette er den nemmeste metode, da Docker håndterer både backend, database og IMAP-poller. Husk at lav en .env.local med creds.
 
 **Fra backend-mappen:**
 
 ```bash
 cd backend
-docker-compose up
+docker-compose up --build
 ```
 
 Dette starter:
