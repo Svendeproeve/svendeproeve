@@ -1,6 +1,5 @@
 import { FullConfig } from "@playwright/test";
 import { execSync } from "child_process";
-import path from "path";
 
 async function globalTeardown(config: FullConfig) {
   console.log("Running global teardown...");
