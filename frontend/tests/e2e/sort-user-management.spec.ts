@@ -6,7 +6,7 @@ import {
   signupUser,
 } from "../helpers/auth";
 
-test.describe("User Management — table sorting", () => {
+test.describe("User Management - table sorting", () => {
   async function setupWithTwoMembers(
     page: Page,
     member1: { prefix: string; fullName: string },
@@ -44,7 +44,6 @@ test.describe("User Management — table sorting", () => {
       .locator(".MuiSnackbar-root")
       .waitFor({ state: "hidden", timeout: 7000 });
 
-    // Wait for all 3 members to appear (owner + 2 invited)
     await expect(page.locator("tbody tr")).toHaveCount(3, { timeout: 10000 });
 
     return { user1, user2, owner };
@@ -112,7 +111,6 @@ test.describe("User Management — table sorting", () => {
     const count = await rows.count();
     const emails: string[] = [];
     for (let i = 0; i < count; i++) {
-      // Email is column index 1
       const text = await rows.nth(i).locator("td").nth(1).textContent();
       emails.push(text?.trim() ?? "");
     }

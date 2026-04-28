@@ -1,7 +1,7 @@
 import { test, expect, Page } from "@playwright/test";
 import { generateTestUser, completeOnboarding } from "../helpers/auth";
 
-test.describe("Category Management — table sorting", () => {
+test.describe("Category Management - table sorting", () => {
   test.beforeEach(async ({ page }) => {
     const user = generateTestUser("sort-cat");
     await completeOnboarding(page, user);
@@ -98,7 +98,6 @@ test.describe("Category Management — table sorting", () => {
     const count = await rows.count();
     const descriptions: string[] = [];
     for (let i = 0; i < count; i++) {
-      // Description is column index 2 (Name=0, Color=1, Description=2)
       const text = await rows.nth(i).locator("td").nth(2).textContent();
       descriptions.push(text?.trim() ?? "");
     }

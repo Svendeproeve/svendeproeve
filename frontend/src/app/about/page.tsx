@@ -52,7 +52,6 @@ export default function AboutPage() {
           pb: { xs: 10, md: 14 },
         }}
       >
-        {/* Navbar — floating box aligned with page container */}
         <Container
           maxWidth="lg"
           sx={{ pt: { xs: 2, md: 2.5 }, px: { xs: 2, md: 3 } }}

@@ -1,7 +1,7 @@
 import { test, expect, Page } from "@playwright/test";
 import { generateTestUser, signupUser } from "../helpers/auth";
 
-test.describe("Mail Account Management — table sorting", () => {
+test.describe("Mail Account Management - table sorting", () => {
   test.beforeEach(async ({ page }) => {
     const user = generateTestUser("sort-mail");
     await signupUser(page, user);
@@ -83,7 +83,6 @@ test.describe("Mail Account Management — table sorting", () => {
     await createMailAccount(page, "Account Apple", "imap.apple.com");
     await createMailAccount(page, "Account Mango", "imap.mango.com");
 
-    // IMAP Host is column index 1
     await page.locator("thead").getByRole("button", { name: "IMAP Host", exact: true }).click();
 
     const hosts = await getColumnValues(page, 1);

@@ -6,7 +6,7 @@ import {
   signupUser,
 } from "../helpers/auth";
 
-test.describe("User Management — invite", () => {
+test.describe("User Management - invite", () => {
   test("cannot invite a user who is already a member", async ({ page }) => {
     const memberUser = generateTestUser("already-member");
     const ownerUser = generateTestUser("owner-invite");
