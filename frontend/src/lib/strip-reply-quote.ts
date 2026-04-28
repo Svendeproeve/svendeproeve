@@ -1,7 +1,7 @@
 /**
  * Returns only the "new" part of an email body for thread view, without the
  * quoted history (since earlier messages are shown as separate cards).
- * Heuristic — matches common English/Danish/German/Outlook reply headers.
+ * Heuristic - matches common English/Danish/German/Outlook reply headers.
  *
  * Gmail often wraps the address so "Den ... skrev ... <mail" is one line and ">:" the next.
  *

@@ -31,7 +31,6 @@ test.describe("Category Management", () => {
   });
 
   test("should edit an existing category", async ({ page }) => {
-    // Create the category first
     await page.getByTestId("category-name-input").fill("Before Edit");
     await page
       .getByTestId("category-description-input")
@@ -65,7 +64,6 @@ test.describe("Category Management", () => {
   });
 
   test("should delete a category", async ({ page }) => {
-    // Create the category first
     await page.getByTestId("category-name-input").fill("To Be Deleted");
     await page
       .getByTestId("category-description-input")

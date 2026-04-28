@@ -5,7 +5,6 @@ test.describe("Mail Account Management", () => {
   test.beforeEach(async ({ page }) => {
     const testUser = generateTestUser("mail-account");
 
-    // Sign up and create organization
     await signupUser(page, testUser);
     await page.getByTestId("show-create-org-button").click();
     const orgName = `Test Org ${Date.now()}`;
@@ -13,7 +12,6 @@ test.describe("Mail Account Management", () => {
     await page.getByTestId("onboarding-create-org-button").click();
     await expect(page).toHaveURL("/dashboard", { timeout: 15000 });
 
-    // Navigate to mail account management
     await page.goto("/mail-account-management");
   });
 
@@ -25,7 +23,6 @@ test.describe("Mail Account Management", () => {
   });
 
   test("should show helper text for account name field", async ({ page }) => {
-    // Check that the Account Name field has helper text
     await expect(
       page.getByText(
         /Friendly name to identify this mail account.*Support Email.*Sales Team/,
@@ -34,7 +31,6 @@ test.describe("Mail Account Management", () => {
   });
 
   test("should display account name field with label", async ({ page }) => {
-    // Check that the Account Name label is present
     await expect(page.getByLabel("Account Name")).toBeVisible();
   });
 
@@ -59,7 +55,6 @@ test.describe("Mail Account Management", () => {
   });
 
   test("should have SSL switches for both IMAP and SMTP", async ({ page }) => {
-    // There should be two SSL switches (IMAP and SMTP)
     const sslSwitches = page.getByText("SSL");
     await expect(sslSwitches).toHaveCount(2);
   });
@@ -84,7 +79,6 @@ test.describe("Mail Account Management", () => {
   });
 
   test("should show table headers for mail accounts", async ({ page }) => {
-    // Check that the table has all expected headers using role-based selectors
     await expect(
       page.getByRole("columnheader", { name: "Name", exact: true }),
     ).toBeVisible();
