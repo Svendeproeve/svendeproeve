@@ -14,7 +14,9 @@ import {
   ListItemButton,
   ListItemText,
   Divider,
+  IconButton,
 } from "@mui/material";
+import { IoLogOutOutline } from "react-icons/io5";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -29,7 +31,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const forceSwitch = searchParams.get("switch") === "true";
-  const { token, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { token, isAuthenticated, isLoading: authLoading, signout } = useAuth();
   const {
     organizations,
     isLoading: isLoadingOrgs,
@@ -45,7 +47,7 @@ export default function OnboardingPage() {
     if (authLoading) return;
     if (!isAuthenticated) {
       router.push("/login");
-    } else if (!forceSwitch && !isLoadingOrgs && organizations.length > 0) {
+    } else if (!forceSwitch && !isLoadingOrgs && organizations.length === 1) {
       const storedOrgId = getStoredOrgId();
       const hasValidStoredOrg = organizations.some((o) => o.id === storedOrgId);
       if (hasValidStoredOrg) {
@@ -105,11 +107,14 @@ export default function OnboardingPage() {
   const storedOrgId = getStoredOrgId();
   const willAutoRedirect =
     !forceSwitch &&
-    organizations.length > 0 &&
+    organizations.length === 1 &&
     organizations.some((o) => o.id === storedOrgId);
   if (willAutoRedirect) return null;
 
   const hasOrganizations = organizations.length > 0;
+  const sortedOrganizations = [...organizations].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 
   return (
     <Box
@@ -121,8 +126,18 @@ export default function OnboardingPage() {
         justifyContent: "center",
         bgcolor: "background.default",
         px: 2,
+        position: "relative",
       }}
     >
+      <IconButton
+        size="small"
+        onClick={signout}
+        data-testid="onboarding-logout-button"
+        sx={{ position: "absolute", top: 16, right: 16, color: "white" }}
+        title="Sign out"
+      >
+        <IoLogOutOutline size={22} />
+      </IconButton>
       <Typography
         variant="h1"
         data-testid="onboarding-welcome-title"
@@ -169,7 +184,7 @@ export default function OnboardingPage() {
                 Your Organizations
               </Typography>
               <List>
-                {organizations.map((org, index) => (
+                {sortedOrganizations.map((org, index) => (
                   <Box key={org.id}>
                     {index > 0 && (
                       <Divider sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />

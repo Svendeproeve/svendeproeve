@@ -16,7 +16,7 @@ export function setStoredOrgId(orgId: string) {
 }
 
 export function useOrganizations() {
-  const { token, isAuthenticated, user } = useAuth();
+  const { token, isAuthenticated, user, isLoading: authLoading } = useAuth();
   const isSuperuser = user?.is_superuser ?? false;
 
   const swrKey =
@@ -29,7 +29,7 @@ export function useOrganizations() {
   const {
     data: organizations,
     error,
-    isLoading,
+    isLoading: orgLoading,
     mutate,
   } = useSWR<Organization[]>(
     swrKey,
@@ -54,7 +54,7 @@ export function useOrganizations() {
     hasOrganizations,
     currentOrg,
     isSuperuser,
-    isLoading,
+    isLoading: authLoading || orgLoading,
     error,
     mutate,
   };
