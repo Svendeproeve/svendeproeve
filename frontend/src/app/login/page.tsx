@@ -18,7 +18,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push("/dashboard");
+      router.push("/onboarding");
     }
   }, [isAuthenticated, authLoading, router]);
 
@@ -34,7 +34,7 @@ export default function LoginPage() {
 
     try {
       await signin({ email, password });
-      router.push("/dashboard");
+      router.push("/onboarding");
     } catch (err: any) {
       showSnackbar(err.message || "Login failed. Please try again.", "error");
     } finally {

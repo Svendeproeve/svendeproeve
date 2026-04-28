@@ -21,7 +21,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated && !justSignedUp) {
-      router.push("/dashboard");
+      router.push("/onboarding");
     }
   }, [isAuthenticated, authLoading, justSignedUp, router]);
 
