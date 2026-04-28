@@ -28,6 +28,7 @@ class UserOut(BaseModel):
     id: str
     email: EmailStr
     full_name: Optional[str] = None
+    is_superuser: bool = False
     created_at: datetime
 
 

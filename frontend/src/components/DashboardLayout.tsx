@@ -29,6 +29,8 @@ import Link from "next/link";
 import { getCategoryColor } from "@/lib/categories";
 import { useAuth } from "@/hooks/useAuth";
 import { useCategories } from "@/hooks/useCategories";
+import { useOrganizations } from "@/hooks/useOrganizations";
+import SuperuserOrgPicker from "@/components/SuperuserOrgPicker";
 
 const drawerWidth = 220;
 
@@ -95,6 +97,7 @@ export default function DashboardLayout({
     userId: user?.id,
     userRole,
   });
+  const { organizations, isSuperuser } = useOrganizations();
 
   const categoryMenuItem: MenuItem = {
     label: "Categories",
@@ -142,12 +145,16 @@ export default function DashboardLayout({
         }}
       >
         <Box sx={{ p: 2 }}>
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", fontSize: "0.9rem" }}
-          >
-            {currentOrg?.name || ""}
-          </Typography>
+          {isSuperuser ? (
+            <SuperuserOrgPicker currentOrg={currentOrg} organizations={organizations} />
+          ) : (
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", fontSize: "0.9rem" }}
+            >
+              {currentOrg?.name || ""}
+            </Typography>
+          )}
         </Box>
 
         <List sx={{ px: 1 }}>

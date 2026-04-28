@@ -31,6 +31,7 @@ def _to_user_out(user_doc: dict) -> UserOut:
         id=str(user_doc["_id"]),
         email=user_doc["email"],
         full_name=user_doc.get("full_name"),
+        is_superuser=user_doc.get("is_superuser", False),
         created_at=user_doc["created_at"],
     )
 

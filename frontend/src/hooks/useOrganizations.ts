@@ -16,7 +16,15 @@ export function setStoredOrgId(orgId: string) {
 }
 
 export function useOrganizations() {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, user } = useAuth();
+  const isSuperuser = user?.is_superuser ?? false;
+
+  const swrKey =
+    isAuthenticated && token
+      ? isSuperuser
+        ? ["organizations-all", token]
+        : ["organizations", token]
+      : null;
 
   const {
     data: organizations,
@@ -24,8 +32,11 @@ export function useOrganizations() {
     isLoading,
     mutate,
   } = useSWR<Organization[]>(
-    isAuthenticated && token ? ["organizations", token] : null,
-    ([_, token]) => organizationApi.list(token),
+    swrKey,
+    ([key, tok]: [string, string]) =>
+      key === "organizations-all"
+        ? organizationApi.listAll(tok)
+        : organizationApi.list(tok),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -42,6 +53,7 @@ export function useOrganizations() {
     organizations: orgs,
     hasOrganizations,
     currentOrg,
+    isSuperuser,
     isLoading,
     error,
     mutate,

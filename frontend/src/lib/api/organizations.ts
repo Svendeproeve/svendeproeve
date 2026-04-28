@@ -47,6 +47,14 @@ export const organizationApi = {
     return res.json();
   },
 
+  listAll: async (token: string): Promise<Organization[]> => {
+    const res = await apiFetch('/admin/organizations', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch all organizations');
+    return res.json();
+  },
+
   listMembers: async (orgId: string, token: string): Promise<Member[]> => {
     const res = await apiFetch(`/organizations/${orgId}/members`, {
       headers: { Authorization: `Bearer ${token}` },

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routes.admin import router as admin_router
 from app.routes.auth import router as auth_router
 from app.routes.emails import router as emails_router
 from app.routes.filters import router as filters_router
@@ -28,6 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+app.include_router(admin_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(organizations_router)

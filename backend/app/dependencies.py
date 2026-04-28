@@ -1,3 +1,4 @@
+from bson import ObjectId
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
@@ -32,6 +33,12 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
 def require_org_membership(org_id: str, user_id: str) -> dict:
     membership = memberships_collection.find_one({"org_id": org_id, "user_id": user_id})
     if not membership:
+        try:
+            user = users_collection.find_one({"_id": ObjectId(user_id)})
+        except Exception:
+            user = None
+        if user and user.get("is_superuser"):
+            return {"org_id": org_id, "user_id": user_id, "role": "owner"}
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this organization",
@@ -47,3 +54,11 @@ def require_org_admin(org_id: str, user_id: str) -> dict:
             detail="Admin role required",
         )
     return membership
+
+
+def require_superuser(current_user: dict = Depends(get_current_user)) -> dict:
+    if not current_user.get("is_superuser"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Superuser required"
+        )
+    return current_user
