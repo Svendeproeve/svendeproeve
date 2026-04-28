@@ -54,11 +54,16 @@ class MembershipOut(BaseModel):
     user_full_name: Optional[str] = None
     role: Literal["owner", "admin", "member"]
     created_at: datetime
+    invitation_status: Optional[str] = "accepted"
 
 
 class InviteMemberRequest(BaseModel):
     email: EmailStr
     role: Literal["admin", "member"] = "member"
+
+
+class UpdateMemberRoleRequest(BaseModel):
+    role: Literal["admin", "member"]
 
 
 class MailAccountCreateRequest(BaseModel):

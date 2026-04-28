@@ -17,6 +17,7 @@ export interface Member {
   user_full_name?: string;
   role: 'owner' | 'admin' | 'member';
   created_at: string;
+  invitation_status?: string;
 }
 
 export interface InviteMemberData {
@@ -52,6 +53,30 @@ export const organizationApi = {
     });
     if (!res.ok) throw new Error('Failed to fetch members');
     return res.json();
+  },
+
+  updateMemberRole: async (orgId: string, userId: string, role: 'admin' | 'member', token: string): Promise<Member> => {
+    const res = await apiFetch(`/organizations/${orgId}/members/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ role }),
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to update role');
+    }
+    return res.json();
+  },
+
+  removeMember: async (orgId: string, userId: string, token: string): Promise<void> => {
+    const res = await apiFetch(`/organizations/${orgId}/members/${userId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to remove member');
+    }
   },
 
   inviteMember: async (orgId: string, data: InviteMemberData, token: string): Promise<Member> => {

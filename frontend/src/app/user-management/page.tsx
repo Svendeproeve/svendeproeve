@@ -30,7 +30,7 @@ import {
   FormControlLabel,
   FormGroup,
 } from "@mui/material";
-import { IoKey } from "react-icons/io5";
+import { IoKey, IoTrash } from "react-icons/io5";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
@@ -64,6 +64,25 @@ export default function UserManagementPage() {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
   const [isSavingAccess, setIsSavingAccess] = useState(false);
+
+  const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  const [updatingRoleFor, setUpdatingRoleFor] = useState<string | null>(null);
+
+  const handleRoleChange = async (member: Member, newRole: 'admin' | 'member') => {
+    if (!currentOrg || !token) return;
+    setUpdatingRoleFor(member.user_id);
+    try {
+      await organizationApi.updateMemberRole(currentOrg.id, member.user_id, newRole, token);
+      await mutate();
+      showSnackbar(`Role updated to ${newRole}`, 'success');
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to update role', 'error');
+    } finally {
+      setUpdatingRoleFor(null);
+    }
+  };
 
   type MemberSortField =
     | "user_full_name"
@@ -227,6 +246,21 @@ export default function UserManagementPage() {
     }
   };
 
+  const handleRemove = async () => {
+    if (!removeTarget || !currentOrg || !token) return;
+    setIsRemoving(true);
+    try {
+      await organizationApi.removeMember(currentOrg.id, removeTarget.user_id, token);
+      await mutate();
+      setRemoveTarget(null);
+      showSnackbar(`${removeTarget.user_full_name || removeTarget.user_email} removed from organization`, 'success');
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to remove member', 'error');
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
   if (isLoadingOrgs || isLoadingMembers) {
     return (
       <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
@@ -352,7 +386,13 @@ export default function UserManagementPage() {
                 </TableCell>
               ))}
               <TableCell sx={{ color: "text.secondary", fontWeight: 600 }}>
+                Invite Status
+              </TableCell>
+              <TableCell sx={{ color: "text.secondary", fontWeight: 600 }}>
                 Category Access
+              </TableCell>
+              <TableCell sx={{ color: "text.secondary", fontWeight: 600 }}>
+                Actions
               </TableCell>
             </TableRow>
           </TableHead>
@@ -370,17 +410,43 @@ export default function UserManagementPage() {
                     {member.user_email}
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={member.role.toUpperCase()}
-                      sx={{
-                        bgcolor: getRoleColor(member.role),
-                        color: "white",
-                        fontWeight: 600,
-                      }}
-                    />
+                    {member.role === 'owner' || (currentUserRole === 'admin' && member.role === 'admin') ? (
+                      <Chip
+                        label={member.role.toUpperCase()}
+                        sx={{ bgcolor: getRoleColor(member.role), color: 'white', fontWeight: 600 }}
+                      />
+                    ) : (
+                      <Select
+                        value={member.role}
+                        size="small"
+                        disabled={updatingRoleFor === member.user_id}
+                        onChange={(e) => handleRoleChange(member, e.target.value as 'admin' | 'member')}
+                        sx={{
+                          color: 'white',
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          bgcolor: getRoleColor(member.role),
+                          borderRadius: 4,
+                          '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                          '& .MuiSelect-icon': { color: 'white' },
+                        }}
+                      >
+                        <MenuItem value="member">MEMBER</MenuItem>
+                        <MenuItem value="admin">ADMIN</MenuItem>
+                      </Select>
+                    )}
                   </TableCell>
                   <TableCell sx={{ color: "white" }}>
                     {new Date(member.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {member.role === "owner" ? (
+                      <Chip label="Owner" size="small" sx={{ bgcolor: '#444', color: 'text.secondary' }} />
+                    ) : member.invitation_status === "pending" ? (
+                      <Chip label="Pending" size="small" sx={{ bgcolor: '#5c4a00', color: '#ffcc00' }} />
+                    ) : (
+                      <Chip label="Accepted" size="small" sx={{ bgcolor: '#1a3a1a', color: '#4caf50' }} />
+                    )}
                   </TableCell>
                   <TableCell>
                     {member.role === "owner" ? (
@@ -401,12 +467,25 @@ export default function UserManagementPage() {
                       </IconButton>
                     )}
                   </TableCell>
+                  <TableCell>
+                    {member.role !== "owner" &&
+                      !(currentUserRole === "admin" && member.role === "admin") && (
+                      <IconButton
+                        size="small"
+                        sx={{ color: '#f44336' }}
+                        onClick={() => setRemoveTarget(member)}
+                        title="Remove from organization"
+                      >
+                        <IoTrash size={18} />
+                      </IconButton>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={7}
                   sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
                 >
                   No members found
@@ -470,6 +549,22 @@ export default function UserManagementPage() {
             }
           >
             {isSavingAccess ? "Saving..." : "Save"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Remove Member Dialog */}
+      <Dialog open={!!removeTarget} onClose={() => setRemoveTarget(null)}>
+        <DialogTitle>Remove Member</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Remove <strong>{removeTarget?.user_full_name || removeTarget?.user_email}</strong> from this organization? They will lose access immediately.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setRemoveTarget(null)} disabled={isRemoving}>Cancel</Button>
+          <Button onClick={handleRemove} color="error" variant="contained" disabled={isRemoving}>
+            {isRemoving ? 'Removing...' : 'Remove'}
           </Button>
         </DialogActions>
       </Dialog>
