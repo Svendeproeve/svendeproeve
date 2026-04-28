@@ -126,14 +126,19 @@ export default function OnboardingPage() {
       <Typography
         variant="h1"
         data-testid="onboarding-welcome-title"
-        sx={{
-          fontSize: "4rem",
-
-          mb: 2,
-          color: "white",
-        }}
+        sx={{ fontSize: "4rem", mb: 2, color: "white" }}
       >
-        Welcome to Sortr
+        Welcome to{" "}
+        <Box
+          component="span"
+          sx={{
+            fontFamily: "var(--font-inria-serif), serif",
+            fontWeight: 700,
+            letterSpacing: "-0.15em",
+          }}
+        >
+          Sortr
+        </Box>
       </Typography>
 
       <Typography
