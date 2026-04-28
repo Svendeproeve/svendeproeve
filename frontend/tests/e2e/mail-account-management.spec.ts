@@ -28,8 +28,8 @@ test.describe("Mail Account Management", () => {
     // Check that the Account Name field has helper text
     await expect(
       page.getByText(
-        /Friendly name to identify this mail account.*Support Email.*Sales Team/
-      )
+        /Friendly name to identify this mail account.*Support Email.*Sales Team/,
+      ),
     ).toBeVisible();
   });
 
@@ -66,16 +66,16 @@ test.describe("Mail Account Management", () => {
 
   test("should have Test IMAP and Test SMTP buttons", async ({ page }) => {
     await expect(
-      page.getByRole("button", { name: /test imap/i })
+      page.getByRole("button", { name: /test imap/i }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /test smtp/i })
+      page.getByRole("button", { name: /test smtp/i }),
     ).toBeVisible();
   });
 
   test("should have Add Account button", async ({ page }) => {
     await expect(
-      page.getByRole("button", { name: /add account/i })
+      page.getByRole("button", { name: /add account/i }),
     ).toBeVisible();
   });
 
@@ -85,15 +85,33 @@ test.describe("Mail Account Management", () => {
 
   test("should show table headers for mail accounts", async ({ page }) => {
     // Check that the table has all expected headers using role-based selectors
-    await expect(page.getByRole("columnheader", { name: "Name", exact: true })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "IMAP Host" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "IMAP Port" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Username" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "SMTP Host" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "SMTP Port" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "IMAP Status" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "SMTP Status" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Actions" })).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Name", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "IMAP Host" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "IMAP Port" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Username" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "SMTP Host" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "SMTP Port" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "IMAP Status" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "SMTP Status" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Actions" }),
+    ).toBeVisible();
   });
 
   test("should show no accounts message initially", async ({ page }) => {

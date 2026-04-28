@@ -1,34 +1,41 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Box, Typography, Card, CardContent, TextField, Button } from '@mui/material';
-import { useAuth } from '@/hooks/useAuth';
-import { userApi } from '@/lib/api';
-import { useSnackbar } from '@/contexts/SnackbarContext';
+import { useState } from "react";
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+} from "@mui/material";
+import { useAuth } from "@/hooks/useAuth";
+import { userApi } from "@/lib/api";
+import { useSnackbar } from "@/contexts/SnackbarContext";
 
 export default function PasswordSection() {
   const { user, token } = useAuth();
   const { showSnackbar } = useSnackbar();
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      showSnackbar('All password fields are required', 'error');
+      showSnackbar("All password fields are required", "error");
       return;
     }
 
     if (newPassword.length < 8) {
-      showSnackbar('New password must be at least 8 characters', 'error');
+      showSnackbar("New password must be at least 8 characters", "error");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      showSnackbar('New passwords do not match', 'error');
+      showSnackbar("New passwords do not match", "error");
       return;
     }
 
@@ -39,14 +46,14 @@ export default function PasswordSection() {
       await userApi.changePassword(
         user.id,
         { current_password: currentPassword, new_password: newPassword },
-        token
+        token,
       );
-      showSnackbar('Password changed successfully', 'success');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      showSnackbar("Password changed successfully", "success");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (err: any) {
-      showSnackbar(err.message || 'Failed to change password', 'error');
+      showSnackbar(err.message || "Failed to change password", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -54,15 +61,14 @@ export default function PasswordSection() {
 
   return (
     <Box>
-
-      <Card sx={{ bgcolor: '#2c2c2c' }}>
+      <Card sx={{ bgcolor: "#2c2c2c" }}>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 3, color: 'white' }}>
+          <Typography variant="h6" sx={{ mb: 3, color: "white" }}>
             Change Password
           </Typography>
 
           <Box component="form" onSubmit={handleChangePassword}>
-            <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>
               Current Password
             </Typography>
             <TextField
@@ -74,7 +80,7 @@ export default function PasswordSection() {
               sx={{ mb: 2 }}
             />
 
-            <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>
               New Password
             </Typography>
             <TextField
@@ -87,7 +93,7 @@ export default function PasswordSection() {
               helperText="Must be at least 8 characters"
             />
 
-            <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>
               Confirm New Password
             </Typography>
             <TextField
@@ -107,10 +113,10 @@ export default function PasswordSection() {
                 px: 4,
                 py: 1.5,
                 fontWeight: 600,
-                textTransform: 'none',
+                textTransform: "none",
               }}
             >
-              {isSubmitting ? 'Changing...' : 'Change Password'}
+              {isSubmitting ? "Changing..." : "Change Password"}
             </Button>
           </Box>
         </CardContent>

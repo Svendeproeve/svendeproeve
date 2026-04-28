@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { generateTestUser, completeOnboarding, logout, TestUser } from "../helpers/auth";
+import {
+  generateTestUser,
+  completeOnboarding,
+  logout,
+  TestUser,
+} from "../helpers/auth";
 
 test.describe("Login Flow", () => {
   let testUser: TestUser;
@@ -25,9 +30,11 @@ test.describe("Login Flow", () => {
     await page.getByTestId("login-password-input").fill("wrongpassword");
     await page.getByTestId("login-submit-button").click();
 
-    const snackbar = page.locator('.MuiSnackbar-root');
+    const snackbar = page.locator(".MuiSnackbar-root");
     await expect(snackbar).toBeVisible();
-    await expect(snackbar.locator('.MuiAlert-message')).toContainText(/Login failed|Invalid credentials/i);
+    await expect(snackbar.locator(".MuiAlert-message")).toContainText(
+      /Login failed|Invalid credentials/i,
+    );
   });
 
   test("should show validation error when fields are empty", async ({
@@ -35,8 +42,10 @@ test.describe("Login Flow", () => {
   }) => {
     await page.getByTestId("login-submit-button").click();
 
-    const snackbar = page.locator('.MuiSnackbar-root');
+    const snackbar = page.locator(".MuiSnackbar-root");
     await expect(snackbar).toBeVisible();
-    await expect(snackbar.locator('.MuiAlert-message')).toContainText('All fields are required');
+    await expect(snackbar.locator(".MuiAlert-message")).toContainText(
+      "All fields are required",
+    );
   });
 });

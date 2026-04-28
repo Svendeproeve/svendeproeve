@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { ReactNode, useState } from 'react';
-import type { SxProps, Theme } from '@mui/material/styles';
-import { usePathname } from 'next/navigation';
+import { ReactNode, useState } from "react";
+import type { SxProps, Theme } from "@mui/material/styles";
+import { usePathname } from "next/navigation";
 import {
   Box,
   Drawer,
@@ -13,13 +13,22 @@ import {
   Typography,
   IconButton,
   Collapse,
-} from '@mui/material';
-import { IoSpeedometerOutline, IoMailOutline, IoPeopleOutline, IoLogOutOutline, IoChevronUp, IoChevronDown, IoAddCircleOutline, IoServerOutline } from 'react-icons/io5';
-import { IconType } from 'react-icons';
-import Link from 'next/link';
-import { getCategoryColor } from '@/lib/categories';
-import { useAuth } from '@/hooks/useAuth';
-import { useCategories } from '@/hooks/useCategories';
+} from "@mui/material";
+import {
+  IoSpeedometerOutline,
+  IoMailOutline,
+  IoPeopleOutline,
+  IoLogOutOutline,
+  IoChevronUp,
+  IoChevronDown,
+  IoAddCircleOutline,
+  IoServerOutline,
+} from "react-icons/io5";
+import { IconType } from "react-icons";
+import Link from "next/link";
+import { getCategoryColor } from "@/lib/categories";
+import { useAuth } from "@/hooks/useAuth";
+import { useCategories } from "@/hooks/useCategories";
 
 const drawerWidth = 220;
 
@@ -39,26 +48,26 @@ interface MenuItem {
 
 const staticMenuItems: MenuItem[] = [
   {
-    label: 'Dashboard',
+    label: "Dashboard",
     icon: IoSpeedometerOutline,
-    href: '/dashboard',
+    href: "/dashboard",
   },
-{
-    label: 'Mail Accounts',
+  {
+    label: "Mail Accounts",
     icon: IoServerOutline,
-    href: '/mail-account-management',
+    href: "/mail-account-management",
     requiresAdmin: true,
   },
   {
-    label: 'Manage Categories',
+    label: "Manage Categories",
     icon: IoAddCircleOutline,
-    href: '/category-management',
+    href: "/category-management",
     requiresAdmin: true,
   },
   {
-    label: 'User Management',
+    label: "User Management",
     icon: IoPeopleOutline,
-    href: '/user-management',
+    href: "/user-management",
     requiresAdmin: true,
   },
 ];
@@ -66,19 +75,29 @@ const staticMenuItems: MenuItem[] = [
 interface DashboardLayoutProps {
   children: ReactNode;
   userName?: string;
-  userRole?: 'owner' | 'admin' | 'member';
+  userRole?: "owner" | "admin" | "member";
   /** Merged onto the main scroll area (default padding is 3). */
   contentSx?: SxProps<Theme>;
 }
 
-export default function DashboardLayout({ children, userName, userRole, contentSx }: DashboardLayoutProps) {
+export default function DashboardLayout({
+  children,
+  userName,
+  userRole,
+  contentSx,
+}: DashboardLayoutProps) {
   const pathname = usePathname();
-  const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({ Categories: true });
+  const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({
+    Categories: true,
+  });
   const { signout, user } = useAuth();
-  const { categories, currentOrg } = useCategories({ userId: user?.id, userRole });
+  const { categories, currentOrg } = useCategories({
+    userId: user?.id,
+    userRole,
+  });
 
   const categoryMenuItem: MenuItem = {
-    label: 'Categories',
+    label: "Categories",
     icon: IoMailOutline,
     submenu: categories.map((category, i) => ({
       label: category.name,
@@ -94,37 +113,40 @@ export default function DashboardLayout({ children, userName, userRole, contentS
   ];
 
   // Filter menu items based on user role
-  const visibleMenuItems = menuItems.filter(item => {
-    if (item.requiresAdmin && userRole === 'member') {
+  const visibleMenuItems = menuItems.filter((item) => {
+    if (item.requiresAdmin && userRole === "member") {
       return false;
     }
     return true;
   });
 
   const toggleMenu = (label: string) => {
-    setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
+    setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <Drawer
         variant="permanent"
         sx={{
           width: drawerWidth,
           flexShrink: 0,
-          '& .MuiDrawer-paper': {
+          "& .MuiDrawer-paper": {
             width: drawerWidth,
-            boxSizing: 'border-box',
-            bgcolor: '#222222',
-            borderRight: 'none',
-            overflow: 'auto',
-            height: '100%',
+            boxSizing: "border-box",
+            bgcolor: "#222222",
+            borderRight: "none",
+            overflow: "auto",
+            height: "100%",
           },
         }}
       >
         <Box sx={{ p: 2 }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
-            {currentOrg?.name || ''}
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", fontSize: "0.9rem" }}
+          >
+            {currentOrg?.name || ""}
           </Typography>
         </Box>
 
@@ -139,23 +161,34 @@ export default function DashboardLayout({ children, userName, userRole, contentS
             return (
               <Box key={item.label}>
                 <ListItem
-                  component={hasSubmenu ? 'div' : Link}
+                  component={hasSubmenu ? "div" : Link}
                   href={item.href}
-                  onClick={hasSubmenu ? () => toggleMenu(item.label) : undefined}
+                  onClick={
+                    hasSubmenu ? () => toggleMenu(item.label) : undefined
+                  }
                   sx={{
-                    color: 'white',
+                    color: "white",
                     borderRadius: 1,
                     mb: 0.5,
-                    cursor: 'pointer',
-                    bgcolor: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-                    '&:hover': { bgcolor: isActive ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)' },
+                    cursor: "pointer",
+                    bgcolor: isActive ? "rgba(255,255,255,0.1)" : "transparent",
+                    "&:hover": {
+                      bgcolor: isActive
+                        ? "rgba(255,255,255,0.12)"
+                        : "rgba(255,255,255,0.05)",
+                    },
                   }}
                 >
-                  <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+                  <ListItemIcon sx={{ color: "white", minWidth: 40 }}>
                     <Icon size={20} />
                   </ListItemIcon>
                   <ListItemText primary={item.label} />
-                  {hasSubmenu && (isOpen ? <IoChevronUp size={20} /> : <IoChevronDown size={20} />)}
+                  {hasSubmenu &&
+                    (isOpen ? (
+                      <IoChevronUp size={20} />
+                    ) : (
+                      <IoChevronDown size={20} />
+                    ))}
                 </ListItem>
 
                 {hasSubmenu && (
@@ -169,24 +202,26 @@ export default function DashboardLayout({ children, userName, userRole, contentS
                             component={Link}
                             href={subItem.href}
                             sx={{
-                              pl: '56px',
+                              pl: "56px",
                               pr: 1,
                               py: 0.75,
-                              color: isSubActive ? 'white' : 'rgba(255,255,255,0.55)',
+                              color: isSubActive
+                                ? "white"
+                                : "rgba(255,255,255,0.55)",
                               borderLeft: `3px solid ${subItem.color}`,
                               mb: 0.25,
                               background: isSubActive
                                 ? `linear-gradient(to right, ${subItem.color}18, transparent)`
-                                : 'transparent',
-                              '&:hover': {
+                                : "transparent",
+                              "&:hover": {
                                 background: `linear-gradient(to right, ${subItem.color}12, transparent)`,
-                                color: 'white',
+                                color: "white",
                               },
                             }}
                           >
                             <ListItemText
                               primary={subItem.label}
-                              primaryTypographyProps={{ fontSize: '0.875rem' }}
+                              primaryTypographyProps={{ fontSize: "0.875rem" }}
                             />
                           </ListItem>
                         );
@@ -199,15 +234,18 @@ export default function DashboardLayout({ children, userName, userRole, contentS
           })}
         </List>
 
-        <Box sx={{ mt: 'auto', p: 2 }}>
-          <Link href="/onboarding?switch=true" style={{ textDecoration: 'none' }}>
+        <Box sx={{ mt: "auto", p: 2 }}>
+          <Link
+            href="/onboarding?switch=true"
+            style={{ textDecoration: "none" }}
+          >
             <Typography
               variant="caption"
               sx={{
-                color: 'rgba(255,255,255,0.25)',
-                fontSize: '0.7rem',
-                cursor: 'pointer',
-                '&:hover': { color: 'rgba(255,255,255,0.45)' },
+                color: "rgba(255,255,255,0.25)",
+                fontSize: "0.7rem",
+                cursor: "pointer",
+                "&:hover": { color: "rgba(255,255,255,0.45)" },
               }}
             >
               + Create or select organization
@@ -221,36 +259,45 @@ export default function DashboardLayout({ children, userName, userRole, contentS
           flex: 1,
           minWidth: 0,
           minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
         }}
       >
         <Box
           sx={{
             flexShrink: 0,
             height: 60,
-            bgcolor: '#2c2c2c',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            bgcolor: "#2c2c2c",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             px: 3,
           }}
         >
-          <Box sx={{ flexGrow: 1, textAlign: 'center' }}>
-            <Typography variant="h5" sx={{ fontFamily: 'var(--font-inria-serif), serif', color: 'white', fontWeight: 700, letterSpacing: '-0.15em', fontSize: '3rem' }}>
+          <Box sx={{ flexGrow: 1, textAlign: "center" }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontFamily: "var(--font-inria-serif), serif",
+                color: "white",
+                fontWeight: 700,
+                letterSpacing: "-0.15em",
+                fontSize: "3rem",
+              }}
+            >
               Sortr
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             {userName && (
-              <Link href="/account-settings" style={{ textDecoration: 'none' }}>
+              <Link href="/account-settings" style={{ textDecoration: "none" }}>
                 <Typography
                   variant="body2"
                   sx={{
-                    color: 'text.secondary',
-                    cursor: 'pointer',
-                    '&:hover': { color: 'white' },
+                    color: "text.secondary",
+                    cursor: "pointer",
+                    "&:hover": { color: "white" },
                   }}
                 >
                   {userName}
@@ -259,7 +306,7 @@ export default function DashboardLayout({ children, userName, userRole, contentS
             )}
             <IconButton
               size="small"
-              sx={{ color: 'white' }}
+              sx={{ color: "white" }}
               onClick={signout}
               data-testid="logout-button"
             >
@@ -272,11 +319,11 @@ export default function DashboardLayout({ children, userName, userRole, contentS
           sx={{
             flex: 1,
             minHeight: 0,
-            overflow: 'auto',
-            bgcolor: 'background.default',
+            overflow: "auto",
+            bgcolor: "background.default",
             p: 3,
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
             ...contentSx,
           }}
         >

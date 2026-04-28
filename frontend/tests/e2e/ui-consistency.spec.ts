@@ -13,7 +13,7 @@ test.describe("UI Consistency", () => {
 
       // Check that logo has the serif font family
       const navbarLogoStyles = await navbarLogo.evaluate((el) =>
-        window.getComputedStyle(el)
+        window.getComputedStyle(el),
       );
       expect(navbarLogoStyles.fontFamily).toContain("Inria Serif");
 
@@ -22,7 +22,7 @@ test.describe("UI Consistency", () => {
       await expect(footerLogo).toBeVisible();
 
       const footerLogoStyles = await footerLogo.evaluate((el) =>
-        window.getComputedStyle(el)
+        window.getComputedStyle(el),
       );
       expect(footerLogoStyles.fontFamily).toContain("Inria Serif");
     });
@@ -37,7 +37,7 @@ test.describe("UI Consistency", () => {
       await expect(logo).toHaveText("Sortr");
 
       const logoStyles = await logo.evaluate((el) =>
-        window.getComputedStyle(el)
+        window.getComputedStyle(el),
       );
       expect(logoStyles.fontFamily).toContain("Inria Serif");
     });
@@ -52,7 +52,7 @@ test.describe("UI Consistency", () => {
       await expect(logo).toHaveText("Sortr");
 
       const logoStyles = await logo.evaluate((el) =>
-        window.getComputedStyle(el)
+        window.getComputedStyle(el),
       );
       expect(logoStyles.fontFamily).toContain("Inria Serif");
     });
@@ -66,7 +66,7 @@ test.describe("UI Consistency", () => {
       await expect(navbarLogo).toBeVisible();
 
       const navbarLogoStyles = await navbarLogo.evaluate((el) =>
-        window.getComputedStyle(el)
+        window.getComputedStyle(el),
       );
       expect(navbarLogoStyles.fontFamily).toContain("Inria Serif");
     });
@@ -80,7 +80,7 @@ test.describe("UI Consistency", () => {
       await expect(navbarLogo).toBeVisible();
 
       const navbarLogoStyles = await navbarLogo.evaluate((el) =>
-        window.getComputedStyle(el)
+        window.getComputedStyle(el),
       );
       expect(navbarLogoStyles.fontFamily).toContain("Inria Serif");
     });
