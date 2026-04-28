@@ -1,26 +1,28 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { Snackbar, Alert } from '@mui/material';
+import { createContext, useContext, useState, ReactNode } from "react";
+import { Snackbar, Alert } from "@mui/material";
 
 interface SnackbarContextType {
-  showSnackbar: (message: string, severity: 'success' | 'error') => void;
+  showSnackbar: (message: string, severity: "success" | "error") => void;
 }
 
-const SnackbarContext = createContext<SnackbarContextType | undefined>(undefined);
+const SnackbarContext = createContext<SnackbarContextType | undefined>(
+  undefined,
+);
 
 export function SnackbarProvider({ children }: { children: ReactNode }) {
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: 'success' | 'error';
+    severity: "success" | "error";
   }>({
     open: false,
-    message: '',
-    severity: 'success',
+    message: "",
+    severity: "success",
   });
 
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+  const showSnackbar = (message: string, severity: "success" | "error") => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -35,9 +37,13 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Alert onClose={handleClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+        <Alert
+          onClose={handleClose}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
@@ -48,7 +54,7 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
 export function useSnackbar() {
   const context = useContext(SnackbarContext);
   if (context === undefined) {
-    throw new Error('useSnackbar must be used within a SnackbarProvider');
+    throw new Error("useSnackbar must be used within a SnackbarProvider");
   }
   return context;
 }

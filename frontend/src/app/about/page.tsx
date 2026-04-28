@@ -166,7 +166,9 @@ export default function AboutPage() {
                 mb: 4,
               }}
             >
-              Sortr is a school project exam/svendeprøve made by Julius, Oskar and Noah. It sorts email using AI, via IMAP and SMTP connections, to connect to a existing mail-server.
+              Sortr is a school project exam/svendeprøve made by Julius, Oskar
+              and Noah. It sorts email using AI, via IMAP and SMTP connections,
+              to connect to a existing mail-server.
             </Typography>
 
             <Button

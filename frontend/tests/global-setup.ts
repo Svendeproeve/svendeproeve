@@ -30,8 +30,12 @@ async function globalSetup(config: FullConfig) {
       },
     );
 
-    backendProcess.stdout?.on("data", (data) => console.log(`[Backend] ${data.toString().trim()}`));
-    backendProcess.stderr?.on("data", (data) => console.error(`[Backend] ${data.toString().trim()}`));
+    backendProcess.stdout?.on("data", (data) =>
+      console.log(`[Backend] ${data.toString().trim()}`),
+    );
+    backendProcess.stderr?.on("data", (data) =>
+      console.error(`[Backend] ${data.toString().trim()}`),
+    );
     (global as any).__BACKEND_PROCESS__ = backendProcess;
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -48,10 +52,13 @@ async function globalSetup(config: FullConfig) {
     let mongoReady = false;
     for (let i = 0; i < 30; i++) {
       try {
-        execSync(`docker exec sortr-mongo-test mongosh --eval "db.adminCommand('ping')"`, {
-          encoding: "utf-8",
-          stdio: "pipe",
-        });
+        execSync(
+          `docker exec sortr-mongo-test mongosh --eval "db.adminCommand('ping')"`,
+          {
+            encoding: "utf-8",
+            stdio: "pipe",
+          },
+        );
         mongoReady = true;
         break;
       } catch {
@@ -60,7 +67,9 @@ async function globalSetup(config: FullConfig) {
     }
 
     if (!mongoReady) {
-      execSync("docker-compose -f docker-compose.test.yml down", { cwd: projectRoot });
+      execSync("docker-compose -f docker-compose.test.yml down", {
+        cwd: projectRoot,
+      });
       throw new Error("MongoDB failed to become ready");
     }
 
@@ -116,7 +125,9 @@ async function globalSetup(config: FullConfig) {
     if (isCI) {
       (global as any).__BACKEND_PROCESS__?.kill();
     } else {
-      execSync("docker-compose -f docker-compose.test.yml down", { cwd: projectRoot });
+      execSync("docker-compose -f docker-compose.test.yml down", {
+        cwd: projectRoot,
+      });
     }
     throw new Error("Backend startup timeout");
   }
@@ -125,7 +136,9 @@ async function globalSetup(config: FullConfig) {
   fs.writeFileSync(
     dbInfoPath,
     JSON.stringify({
-      mongoUri: isCI ? "mongodb://localhost:27017" : "mongodb://localhost:27019",
+      mongoUri: isCI
+        ? "mongodb://localhost:27017"
+        : "mongodb://localhost:27019",
       dbName: TEST_DB_NAME,
     }),
   );

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -10,9 +10,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Button,
-  Alert,
   Card,
   CardContent,
   Chip,
@@ -29,26 +29,35 @@ import {
   Checkbox,
   FormControlLabel,
   FormGroup,
-} from '@mui/material';
-import { IoKey } from 'react-icons/io5';
-import { useRouter } from 'next/navigation';
-import DashboardLayout from '@/components/DashboardLayout';
-import { useAuth } from '@/hooks/useAuth';
-import { useOrganizations } from '@/hooks/useOrganizations';
-import { useCategories } from '@/hooks/useCategories';
-import { organizationApi, Member, InviteMemberData, categoryApi } from '@/lib/api';
-import useSWR from 'swr';
-import { useSnackbar } from '@/contexts/SnackbarContext';
+} from "@mui/material";
+import { IoKey } from "react-icons/io5";
+import { useRouter } from "next/navigation";
+import DashboardLayout from "@/components/DashboardLayout";
+import { useAuth } from "@/hooks/useAuth";
+import { useOrganizations } from "@/hooks/useOrganizations";
+import { useCategories } from "@/hooks/useCategories";
+import {
+  organizationApi,
+  Member,
+  InviteMemberData,
+  categoryApi,
+} from "@/lib/api";
+import useSWR from "swr";
+import { useSnackbar } from "@/contexts/SnackbarContext";
 
 export default function UserManagementPage() {
   const router = useRouter();
   const { isAuthenticated, user, token } = useAuth();
-  const { organizations, currentOrg, isLoading: isLoadingOrgs } = useOrganizations();
+  const {
+    organizations,
+    currentOrg,
+    isLoading: isLoadingOrgs,
+  } = useOrganizations();
   const { categories } = useCategories();
   const { showSnackbar } = useSnackbar();
 
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'admin' | 'member'>('member');
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"admin" | "member">("member");
   const [isInviting, setIsInviting] = useState(false);
 
   const [accessMember, setAccessMember] = useState<Member | null>(null);
@@ -56,42 +65,101 @@ export default function UserManagementPage() {
   const [isLoadingAccess, setIsLoadingAccess] = useState(false);
   const [isSavingAccess, setIsSavingAccess] = useState(false);
 
-  const { data: members, mutate, isLoading: isLoadingMembers } = useSWR<Member[]>(
-    currentOrg && token ? ['members', currentOrg.id, token] : null,
+  type MemberSortField =
+    | "user_full_name"
+    | "user_email"
+    | "role"
+    | "created_at";
+  const [sortBy, setSortBy] = useState<MemberSortField>("user_full_name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (field: MemberSortField) => {
+    setSortDir(sortBy === field && sortDir === "asc" ? "desc" : "asc");
+    setSortBy(field);
+  };
+
+  const {
+    data: members,
+    mutate,
+    isLoading: isLoadingMembers,
+  } = useSWR<Member[]>(
+    currentOrg && token ? ["members", currentOrg.id, token] : null,
     ([_, orgId, token]) => organizationApi.listMembers(orgId, token),
-    { revalidateOnFocus: false, revalidateOnReconnect: true }
+    { revalidateOnFocus: false, revalidateOnReconnect: true },
   );
 
-  const currentUserRole = members?.find(m => m.user_id === user?.id)?.role;
+  const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role;
+
+  const sortedMembers = useMemo(() => {
+    if (!members) return [];
+    return [...members].sort((a, b) => {
+      let aVal: string, bVal: string;
+      switch (sortBy) {
+        case "user_full_name":
+          aVal = a.user_full_name ?? "";
+          bVal = b.user_full_name ?? "";
+          break;
+        case "user_email":
+          aVal = a.user_email;
+          bVal = b.user_email;
+          break;
+        case "role":
+          aVal = a.role;
+          bVal = b.role;
+          break;
+        case "created_at":
+          aVal = a.created_at;
+          bVal = b.created_at;
+          break;
+        default:
+          aVal = "";
+          bVal = "";
+      }
+      return sortDir === "desc"
+        ? bVal.localeCompare(aVal)
+        : aVal.localeCompare(bVal);
+    });
+  }, [members, sortBy, sortDir]);
 
   const { isLoading: isLoadingAuth } = useAuth();
 
   useEffect(() => {
     if (isLoadingAuth) return;
     if (!isAuthenticated) {
-      router.push('/login');
+      router.push("/login");
     } else if (!isLoadingOrgs && organizations.length === 0) {
-      router.push('/onboarding');
-    } else if (members && currentUserRole === 'member') {
-      router.push('/dashboard');
+      router.push("/onboarding");
+    } else if (members && currentUserRole === "member") {
+      router.push("/dashboard");
     }
-  }, [isAuthenticated, isLoadingAuth, organizations, isLoadingOrgs, members, currentUserRole, router]);
+  }, [
+    isAuthenticated,
+    isLoadingAuth,
+    organizations,
+    isLoadingOrgs,
+    members,
+    currentUserRole,
+    router,
+  ]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email.trim()) {
-      showSnackbar('Email is required', 'error');
+      showSnackbar("Email is required", "error");
       return;
     }
     if (!currentOrg || !token) {
-      showSnackbar('No organization selected', 'error');
+      showSnackbar("No organization selected", "error");
       return;
     }
 
     const normalized = email.trim().toLowerCase();
-    if (members?.some(m => m.user_email.toLowerCase() === normalized)) {
-      showSnackbar('That user is already a member of this organization', 'error');
+    if (members?.some((m) => m.user_email.toLowerCase() === normalized)) {
+      showSnackbar(
+        "That user is already a member of this organization",
+        "error",
+      );
       return;
     }
 
@@ -101,11 +169,14 @@ export default function UserManagementPage() {
       await organizationApi.inviteMember(currentOrg.id, data, token);
       await mutate();
       const invitedEmail = email;
-      setEmail('');
-      setRole('member');
-      showSnackbar(`Successfully invited ${invitedEmail} as ${role}`, 'success');
+      setEmail("");
+      setRole("member");
+      showSnackbar(
+        `Successfully invited ${invitedEmail} as ${role}`,
+        "success",
+      );
     } catch (err: any) {
-      showSnackbar(err.message || 'Failed to invite member', 'error');
+      showSnackbar(err.message || "Failed to invite member", "error");
     } finally {
       setIsInviting(false);
     }
@@ -116,7 +187,11 @@ export default function UserManagementPage() {
     setAccessMember(member);
     setIsLoadingAccess(true);
     try {
-      const ids = await categoryApi.getMemberAccess(currentOrg.id, member.user_id, token);
+      const ids = await categoryApi.getMemberAccess(
+        currentOrg.id,
+        member.user_id,
+        token,
+      );
       setSelectedCategoryIds(ids);
     } catch {
       setSelectedCategoryIds([]);
@@ -126,8 +201,10 @@ export default function UserManagementPage() {
   };
 
   const toggleCategory = (categoryId: string) => {
-    setSelectedCategoryIds(prev =>
-      prev.includes(categoryId) ? prev.filter(id => id !== categoryId) : [...prev, categoryId]
+    setSelectedCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId],
     );
   };
 
@@ -135,11 +212,16 @@ export default function UserManagementPage() {
     if (!accessMember || !currentOrg || !token) return;
     setIsSavingAccess(true);
     try {
-      await categoryApi.setMemberAccess(currentOrg.id, accessMember.user_id, selectedCategoryIds, token);
+      await categoryApi.setMemberAccess(
+        currentOrg.id,
+        accessMember.user_id,
+        selectedCategoryIds,
+        token,
+      );
       setAccessMember(null);
-      showSnackbar('Category access updated successfully', 'success');
+      showSnackbar("Category access updated successfully", "success");
     } catch (err: any) {
-      showSnackbar(err.message || 'Failed to update access', 'error');
+      showSnackbar(err.message || "Failed to update access", "error");
     } finally {
       setIsSavingAccess(false);
     }
@@ -148,41 +230,52 @@ export default function UserManagementPage() {
   if (isLoadingOrgs || isLoadingMembers) {
     return (
       <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "50vh",
+          }}
+        >
           <CircularProgress />
         </Box>
       </DashboardLayout>
     );
   }
 
-  if (!isAuthenticated || !currentOrg || currentUserRole === 'member') {
+  if (!isAuthenticated || !currentOrg || currentUserRole === "member") {
     return null;
   }
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'owner': return '#f44336';
-      case 'admin': return '#ff9800';
-      case 'member': return '#2196f3';
-      default: return '#666666';
+      case "owner":
+        return "#f44336";
+      case "admin":
+        return "#ff9800";
+      case "member":
+        return "#2196f3";
+      default:
+        return "#666666";
     }
   };
 
   return (
     <DashboardLayout userName={user?.full_name} userRole={currentUserRole}>
-      <Typography variant="h4" sx={{ mb: 4, color: 'white' }}>
+      <Typography variant="h4" sx={{ mb: 4, color: "white" }}>
         User Management
       </Typography>
 
       {/* Invite Member Form */}
-      <Card sx={{ mb: 4, bgcolor: '#2c2c2c' }}>
+      <Card sx={{ mb: 4, bgcolor: "#2c2c2c" }}>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 3, color: 'white' }}>
+          <Typography variant="h6" sx={{ mb: 3, color: "white" }}>
             Invite Member
           </Typography>
 
           <Box component="form" onSubmit={handleInvite}>
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
               <TextField
                 fullWidth
                 label="Email Address"
@@ -191,14 +284,16 @@ export default function UserManagementPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isInviting}
-                inputProps={{ 'data-testid': 'invite-email-input' }}
+                inputProps={{ "data-testid": "invite-email-input" }}
               />
               <FormControl sx={{ minWidth: 150 }}>
                 <InputLabel>Role</InputLabel>
                 <Select
                   value={role}
                   label="Role"
-                  onChange={(e) => setRole(e.target.value as 'admin' | 'member')}
+                  onChange={(e) =>
+                    setRole(e.target.value as "admin" | "member")
+                  }
                   disabled={isInviting}
                   data-testid="invite-role-select"
                 >
@@ -212,54 +307,93 @@ export default function UserManagementPage() {
               variant="contained"
               disabled={isInviting}
               data-testid="invite-submit-button"
-              sx={{ px: 4, py: 1.5, fontSize: '1rem', fontWeight: 600, textTransform: 'none' }}
+              sx={{
+                px: 4,
+                py: 1.5,
+                fontSize: "1rem",
+                fontWeight: 600,
+                textTransform: "none",
+              }}
             >
-              {isInviting ? 'Inviting...' : 'Invite'}
+              {isInviting ? "Inviting..." : "Invite"}
             </Button>
           </Box>
         </CardContent>
       </Card>
 
       {/* Members List */}
-      <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
+      <Typography variant="h6" sx={{ mb: 2, color: "white" }}>
         Current Members
       </Typography>
 
-      <TableContainer sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+      <TableContainer sx={{ bgcolor: "background.paper", borderRadius: 1 }}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Name</TableCell>
-              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Email</TableCell>
-              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Role</TableCell>
-              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Joined</TableCell>
-              <TableCell sx={{ color: 'text.secondary', fontWeight: 600 }}>Category Access</TableCell>
+              {(
+                [
+                  ["user_full_name", "Name"],
+                  ["user_email", "Email"],
+                  ["role", "Role"],
+                  ["created_at", "Joined"],
+                ] as [MemberSortField, string][]
+              ).map(([field, label]) => (
+                <TableCell
+                  key={field}
+                  sx={{ color: "text.secondary", fontWeight: 600 }}
+                >
+                  <TableSortLabel
+                    active={sortBy === field}
+                    direction={sortBy === field ? sortDir : "asc"}
+                    onClick={() => handleSort(field)}
+                  >
+                    {label}
+                  </TableSortLabel>
+                </TableCell>
+              ))}
+              <TableCell sx={{ color: "text.secondary", fontWeight: 600 }}>
+                Category Access
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {members && members.length > 0 ? (
-              members.map((member) => (
-                <TableRow key={member.user_id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
-                  <TableCell sx={{ color: 'white' }}>{member.user_full_name || 'N/A'}</TableCell>
-                  <TableCell sx={{ color: 'white' }}>{member.user_email}</TableCell>
+            {sortedMembers.length > 0 ? (
+              sortedMembers.map((member) => (
+                <TableRow
+                  key={member.user_id}
+                  sx={{ "&:hover": { bgcolor: "rgba(255,255,255,0.03)" } }}
+                >
+                  <TableCell sx={{ color: "white" }}>
+                    {member.user_full_name || "N/A"}
+                  </TableCell>
+                  <TableCell sx={{ color: "white" }}>
+                    {member.user_email}
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={member.role.toUpperCase()}
-                      sx={{ bgcolor: getRoleColor(member.role), color: 'white', fontWeight: 600 }}
+                      sx={{
+                        bgcolor: getRoleColor(member.role),
+                        color: "white",
+                        fontWeight: 600,
+                      }}
                     />
                   </TableCell>
-                  <TableCell sx={{ color: 'white' }}>
+                  <TableCell sx={{ color: "white" }}>
                     {new Date(member.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    {member.role === 'owner' ? (
-                      <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 220 }}>
+                    {member.role === "owner" ? (
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary", maxWidth: 220 }}
+                      >
                         Owner has access to all categories
                       </Typography>
                     ) : (
                       <IconButton
                         size="small"
-                        sx={{ color: 'text.secondary' }}
+                        sx={{ color: "text.secondary" }}
                         onClick={() => openAccessDialog(member)}
                         title="Manage category access"
                       >
@@ -271,7 +405,10 @@ export default function UserManagementPage() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
+                <TableCell
+                  colSpan={5}
+                  sx={{ color: "text.secondary", textAlign: "center", py: 4 }}
+                >
                   No members found
                 </TableCell>
               </TableRow>
@@ -281,22 +418,28 @@ export default function UserManagementPage() {
       </TableContainer>
 
       {/* Category Access Dialog */}
-      <Dialog open={!!accessMember} onClose={() => setAccessMember(null)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={!!accessMember}
+        onClose={() => setAccessMember(null)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>
-          Category Access — {accessMember?.user_full_name || accessMember?.user_email}
+          Category Access —{" "}
+          {accessMember?.user_full_name || accessMember?.user_email}
         </DialogTitle>
         <DialogContent>
           {isLoadingAccess ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
               <CircularProgress size={24} />
             </Box>
           ) : categories.length === 0 ? (
-            <Typography variant="body2" sx={{ color: 'text.secondary', py: 1 }}>
+            <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
               No categories available. Create categories first.
             </Typography>
           ) : (
             <FormGroup sx={{ mt: 1 }}>
-              {categories.map(category => (
+              {categories.map((category) => (
                 <FormControlLabel
                   key={category.id}
                   control={
@@ -313,13 +456,20 @@ export default function UserManagementPage() {
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setAccessMember(null)} disabled={isSavingAccess}>Cancel</Button>
+          <Button
+            onClick={() => setAccessMember(null)}
+            disabled={isSavingAccess}
+          >
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleSaveAccess}
-            disabled={isSavingAccess || isLoadingAccess || categories.length === 0}
+            disabled={
+              isSavingAccess || isLoadingAccess || categories.length === 0
+            }
           >
-            {isSavingAccess ? 'Saving...' : 'Save'}
+            {isSavingAccess ? "Saving..." : "Save"}
           </Button>
         </DialogActions>
       </Dialog>

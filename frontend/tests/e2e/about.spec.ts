@@ -1,9 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("About Page", () => {
-  test("should display about page when not authenticated", async ({
-    page,
-  }) => {
+  test("should display about page when not authenticated", async ({ page }) => {
     await page.goto("/about");
 
     // Check that the about page title is visible
@@ -12,8 +10,8 @@ test.describe("About Page", () => {
     // Check that the about content is visible
     await expect(
       page.getByText(
-        /Sortr is a school project exam\/svendeprøve made by Julius, Oskar and Noah/
-      )
+        /Sortr is a school project exam\/svendeprøve made by Julius, Oskar and Noah/,
+      ),
     ).toBeVisible();
 
     // Check that it mentions AI and email sorting
@@ -22,7 +20,7 @@ test.describe("About Page", () => {
 
     // Check get started button is visible
     await expect(
-      page.getByRole("button", { name: /get started now/i })
+      page.getByRole("button", { name: /get started now/i }),
     ).toBeVisible();
   });
 

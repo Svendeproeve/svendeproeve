@@ -14,7 +14,9 @@ test.describe("Registration Flow", () => {
     await page.getByTestId("register-fullname-input").fill(testUser.fullName);
     await page.getByTestId("register-email-input").fill(testUser.email);
     await page.getByTestId("register-password-input").fill(testUser.password);
-    await page.getByTestId("register-confirm-password-input").fill(testUser.password);
+    await page
+      .getByTestId("register-confirm-password-input")
+      .fill(testUser.password);
 
     await page.getByTestId("register-submit-button").click();
 
@@ -40,23 +42,31 @@ test.describe("Registration Flow", () => {
     await page.getByTestId("register-confirm-password-input").fill("short");
     await page.getByTestId("register-submit-button").click();
 
-    const snackbar = page.locator('.MuiSnackbar-root');
+    const snackbar = page.locator(".MuiSnackbar-root");
     await expect(snackbar).toBeVisible();
-    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Password must be at least 8 characters');
+    await expect(snackbar.locator(".MuiAlert-message")).toContainText(
+      "Password must be at least 8 characters",
+    );
   });
 
-  test("should show validation error for password mismatch", async ({ page }) => {
+  test("should show validation error for password mismatch", async ({
+    page,
+  }) => {
     const testUser = generateTestUser("mismatch");
 
     await page.goto("/register");
     await page.getByTestId("register-fullname-input").fill(testUser.fullName);
     await page.getByTestId("register-email-input").fill(testUser.email);
     await page.getByTestId("register-password-input").fill("password123");
-    await page.getByTestId("register-confirm-password-input").fill("different123");
+    await page
+      .getByTestId("register-confirm-password-input")
+      .fill("different123");
     await page.getByTestId("register-submit-button").click();
 
-    const snackbar = page.locator('.MuiSnackbar-root');
+    const snackbar = page.locator(".MuiSnackbar-root");
     await expect(snackbar).toBeVisible();
-    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Passwords do not match');
+    await expect(snackbar.locator(".MuiAlert-message")).toContainText(
+      "Passwords do not match",
+    );
   });
 });

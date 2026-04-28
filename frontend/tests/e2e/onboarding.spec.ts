@@ -11,7 +11,9 @@ test.describe("Onboarding Flow", () => {
     await page.getByTestId("register-fullname-input").fill(testUser.fullName);
     await page.getByTestId("register-email-input").fill(email);
     await page.getByTestId("register-password-input").fill(testUser.password);
-    await page.getByTestId("register-confirm-password-input").fill(testUser.password);
+    await page
+      .getByTestId("register-confirm-password-input")
+      .fill(testUser.password);
     await page.getByTestId("register-submit-button").click();
 
     await expect(page).toHaveURL("/onboarding", { timeout: 10000 });
@@ -23,7 +25,9 @@ test.describe("Onboarding Flow", () => {
     await page.getByTestId("onboarding-create-org-button").click();
 
     await expect(page).toHaveURL("/dashboard", { timeout: 15000 });
-    await expect(page.getByTestId("dashboard-greeting")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("dashboard-greeting")).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("should show validation error when organization name is too short", async ({
@@ -33,9 +37,11 @@ test.describe("Onboarding Flow", () => {
     await page.getByTestId("onboarding-org-name-input").fill("A");
     await page.getByTestId("onboarding-create-org-button").click();
 
-    const snackbar = page.locator('.MuiSnackbar-root');
+    const snackbar = page.locator(".MuiSnackbar-root");
     await expect(snackbar).toBeVisible();
-    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Organization name must be at least 2 characters');
+    await expect(snackbar.locator(".MuiAlert-message")).toContainText(
+      "Organization name must be at least 2 characters",
+    );
   });
 
   test("should show error when organization name is empty", async ({
@@ -44,8 +50,10 @@ test.describe("Onboarding Flow", () => {
     await page.getByTestId("show-create-org-button").click();
     await page.getByTestId("onboarding-create-org-button").click();
 
-    const snackbar = page.locator('.MuiSnackbar-root');
+    const snackbar = page.locator(".MuiSnackbar-root");
     await expect(snackbar).toBeVisible();
-    await expect(snackbar.locator('.MuiAlert-message')).toContainText('Organization name is required');
+    await expect(snackbar.locator(".MuiAlert-message")).toContainText(
+      "Organization name is required",
+    );
   });
 });

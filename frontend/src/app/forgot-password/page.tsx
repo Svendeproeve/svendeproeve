@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Box, TextField, Button, Typography, Link, Alert } from '@mui/material';
-import NextLink from 'next/link';
-import { authApi } from '@/lib/api/auth';
-import { useSnackbar } from '@/contexts/SnackbarContext';
+import { useState } from "react";
+import { Box, TextField, Button, Typography, Link, Alert } from "@mui/material";
+import NextLink from "next/link";
+import { authApi } from "@/lib/api/auth";
+import { useSnackbar } from "@/contexts/SnackbarContext";
 
 export default function ForgotPasswordPage() {
   const { showSnackbar } = useSnackbar();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email) {
-      showSnackbar('Email is required', 'error');
+      showSnackbar("Email is required", "error");
       return;
     }
 
@@ -23,10 +23,13 @@ export default function ForgotPasswordPage() {
 
     try {
       await authApi.forgotPassword(email);
-      showSnackbar('If the email exists, a password reset link has been sent. Please check your inbox.', 'success');
-      setEmail('');
+      showSnackbar(
+        "If the email exists, a password reset link has been sent. Please check your inbox.",
+        "success",
+      );
+      setEmail("");
     } catch (err: any) {
-      showSnackbar(err.message || 'Request failed. Please try again.', 'error');
+      showSnackbar(err.message || "Request failed. Please try again.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -35,20 +38,20 @@ export default function ForgotPasswordPage() {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        bgcolor: "background.default",
       }}
     >
       <Typography
         variant="h1"
         sx={{
-          fontSize: '4rem',
+          fontSize: "4rem",
           mb: 8,
-          color: 'white',
+          color: "white",
         }}
       >
         Sortr
@@ -58,7 +61,7 @@ export default function ForgotPasswordPage() {
         component="form"
         onSubmit={handleSubmit}
         sx={{
-          width: '100%',
+          width: "100%",
           maxWidth: 400,
         }}
       >
@@ -66,9 +69,9 @@ export default function ForgotPasswordPage() {
           variant="h5"
           sx={{
             mb: 2,
-            color: 'white',
+            color: "white",
             fontWeight: 600,
-            textAlign: 'center',
+            textAlign: "center",
           }}
         >
           Reset Password
@@ -78,16 +81,17 @@ export default function ForgotPasswordPage() {
           variant="body2"
           sx={{
             mb: 3,
-            color: 'text.secondary',
-            textAlign: 'center',
+            color: "text.secondary",
+            textAlign: "center",
           }}
         >
-          Enter your email address and we'll send you a link to reset your password.
+          Enter your email address and we'll send you a link to reset your
+          password.
         </Typography>
 
         <Typography
           variant="body1"
-          sx={{ mb: 1, color: 'white', fontWeight: 500 }}
+          sx={{ mb: 1, color: "white", fontWeight: 500 }}
         >
           Email
         </Typography>
@@ -99,7 +103,7 @@ export default function ForgotPasswordPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isLoading}
-          inputProps={{ 'data-testid': 'forgot-password-email-input' }}
+          inputProps={{ "data-testid": "forgot-password-email-input" }}
           sx={{ mb: 2 }}
         />
 
@@ -111,21 +115,21 @@ export default function ForgotPasswordPage() {
           data-testid="forgot-password-submit-button"
           sx={{
             py: 1.5,
-            fontSize: '1.1rem',
+            fontSize: "1.1rem",
             fontWeight: 600,
-            textTransform: 'none',
+            textTransform: "none",
           }}
         >
-          {isLoading ? 'Sending...' : 'Send Reset Link'}
+          {isLoading ? "Sending..." : "Send Reset Link"}
         </Button>
 
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Remember your password?{' '}
+        <Box sx={{ mt: 2, textAlign: "center" }}>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            Remember your password?{" "}
             <Link
               component={NextLink}
               href="/login"
-              sx={{ color: 'white', textDecoration: 'underline' }}
+              sx={{ color: "white", textDecoration: "underline" }}
             >
               Back to Login
             </Link>
