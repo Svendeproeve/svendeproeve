@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Box,
   Typography,
@@ -8,51 +8,57 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
-} from '@mui/material';
-import { useRouter } from 'next/navigation';
-import DashboardLayout from '@/components/DashboardLayout';
-import { useAuth } from '@/hooks/useAuth';
-import { useOrganizations } from '@/hooks/useOrganizations';
-import ProfileSection from './ProfileSection';
-import PasswordSection from './PasswordSection';
-import DeleteAccountSection from './DeleteAccountSection';
+} from "@mui/material";
+import { useRouter } from "next/navigation";
+import DashboardLayout from "@/components/DashboardLayout";
+import { useAuth } from "@/hooks/useAuth";
+import { useOrganizations } from "@/hooks/useOrganizations";
+import ProfileSection from "./ProfileSection";
+import PasswordSection from "./PasswordSection";
+import DeleteAccountSection from "./DeleteAccountSection";
 
 export default function AccountSettingsPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
   const { isLoading: isLoadingOrgs } = useOrganizations();
 
-  const [activeSection, setActiveSection] = useState<'profile' | 'password' | 'delete'>('profile');
+  const [activeSection, setActiveSection] = useState<
+    "profile" | "password" | "delete"
+  >("profile");
 
   if (isLoadingAuth || isLoadingOrgs) {
-    return <DashboardLayout userName={user?.full_name}><Box /></DashboardLayout>;
+    return (
+      <DashboardLayout userName={user?.full_name}>
+        <Box />
+      </DashboardLayout>
+    );
   }
 
   if (!isAuthenticated || !user) {
-    router.push('/login');
+    router.push("/login");
     return null;
   }
 
   const menuItems = [
-    { id: 'profile', label: 'Profile' },
-    { id: 'password', label: 'Password' },
-    { id: 'delete', label: 'Delete Account' },
+    { id: "profile", label: "Profile" },
+    { id: "password", label: "Password" },
+    { id: "delete", label: "Delete Account" },
   ];
 
   return (
     <DashboardLayout userName={user?.full_name}>
-      <Typography variant="h4" sx={{ mb: 4, color: 'white' }}>
+      <Typography variant="h4" sx={{ mb: 4, color: "white" }}>
         Account Settings
       </Typography>
 
-      <Box sx={{ display: 'flex', gap: 3 }}>
+      <Box sx={{ display: "flex", gap: 3 }}>
         {/* Sidebar Menu */}
         <Box
           sx={{
             width: 200,
-            bgcolor: '#2c2c2c',
+            bgcolor: "#2c2c2c",
             borderRadius: 1,
-            height: 'fit-content',
+            height: "fit-content",
           }}
         >
           <List sx={{ p: 1 }}>
@@ -60,18 +66,31 @@ export default function AccountSettingsPage() {
               <ListItem key={item.id} disablePadding>
                 <ListItemButton
                   selected={activeSection === item.id}
-                  onClick={() => setActiveSection(item.id as 'profile' | 'password' | 'delete')}
+                  onClick={() =>
+                    setActiveSection(
+                      item.id as "profile" | "password" | "delete",
+                    )
+                  }
                   sx={{
                     borderRadius: 1,
                     mb: 0.5,
-                    '&.Mui-selected': {
-                      bgcolor: item.id === 'delete' ? 'rgba(244, 67, 54, 0.1)' : 'rgba(255,255,255,0.1)',
-                      '&:hover': {
-                        bgcolor: item.id === 'delete' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(255,255,255,0.15)',
+                    "&.Mui-selected": {
+                      bgcolor:
+                        item.id === "delete"
+                          ? "rgba(244, 67, 54, 0.1)"
+                          : "rgba(255,255,255,0.1)",
+                      "&:hover": {
+                        bgcolor:
+                          item.id === "delete"
+                            ? "rgba(244, 67, 54, 0.15)"
+                            : "rgba(255,255,255,0.15)",
                       },
                     },
-                    '&:hover': {
-                      bgcolor: item.id === 'delete' ? 'rgba(244, 67, 54, 0.05)' : 'rgba(255,255,255,0.05)',
+                    "&:hover": {
+                      bgcolor:
+                        item.id === "delete"
+                          ? "rgba(244, 67, 54, 0.05)"
+                          : "rgba(255,255,255,0.05)",
                     },
                   }}
                 >
@@ -79,9 +98,14 @@ export default function AccountSettingsPage() {
                     primary={item.label}
                     primaryTypographyProps={{
                       sx: {
-                        color: item.id === 'delete'
-                          ? (activeSection === item.id ? '#f44336' : 'rgba(244, 67, 54, 0.7)')
-                          : (activeSection === item.id ? 'white' : 'text.secondary'),
+                        color:
+                          item.id === "delete"
+                            ? activeSection === item.id
+                              ? "#f44336"
+                              : "rgba(244, 67, 54, 0.7)"
+                            : activeSection === item.id
+                              ? "white"
+                              : "text.secondary",
                         fontWeight: activeSection === item.id ? 600 : 400,
                       },
                     }}
@@ -94,9 +118,9 @@ export default function AccountSettingsPage() {
 
         {/* Content Area */}
         <Box sx={{ flex: 1 }}>
-          {activeSection === 'profile' && <ProfileSection />}
-          {activeSection === 'password' && <PasswordSection />}
-          {activeSection === 'delete' && <DeleteAccountSection />}
+          {activeSection === "profile" && <ProfileSection />}
+          {activeSection === "password" && <PasswordSection />}
+          {activeSection === "delete" && <DeleteAccountSection />}
         </Box>
       </Box>
     </DashboardLayout>

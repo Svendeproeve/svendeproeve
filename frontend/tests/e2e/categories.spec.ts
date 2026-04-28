@@ -10,13 +10,15 @@ test.describe("Category Management", () => {
 
   test("should create a new category", async ({ page }) => {
     await page.getByTestId("category-name-input").fill("Support");
-    await page.getByTestId("category-description-input").fill(
-      "Emails from customers needing help"
-    );
+    await page
+      .getByTestId("category-description-input")
+      .fill("Emails from customers needing help");
     await page.getByTestId("category-submit").click();
 
     await expect(
-      page.locator("[data-testid^='category-row-']").filter({ hasText: "Support" })
+      page
+        .locator("[data-testid^='category-row-']")
+        .filter({ hasText: "Support" }),
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -31,9 +33,9 @@ test.describe("Category Management", () => {
   test("should edit an existing category", async ({ page }) => {
     // Create the category first
     await page.getByTestId("category-name-input").fill("Before Edit");
-    await page.getByTestId("category-description-input").fill(
-      "Original description"
-    );
+    await page
+      .getByTestId("category-description-input")
+      .fill("Original description");
     await page.getByTestId("category-submit").click();
 
     const row = page
@@ -51,19 +53,23 @@ test.describe("Category Management", () => {
     await page.getByTestId("category-edit-save").click();
 
     await expect(
-      page.locator("[data-testid^='category-row-']").filter({ hasText: "After Edit" })
+      page
+        .locator("[data-testid^='category-row-']")
+        .filter({ hasText: "After Edit" }),
     ).toBeVisible({ timeout: 10000 });
     await expect(
-      page.locator("[data-testid^='category-row-']").filter({ hasText: "Before Edit" })
+      page
+        .locator("[data-testid^='category-row-']")
+        .filter({ hasText: "Before Edit" }),
     ).not.toBeVisible();
   });
 
   test("should delete a category", async ({ page }) => {
     // Create the category first
     await page.getByTestId("category-name-input").fill("To Be Deleted");
-    await page.getByTestId("category-description-input").fill(
-      "This category will be deleted"
-    );
+    await page
+      .getByTestId("category-description-input")
+      .fill("This category will be deleted");
     await page.getByTestId("category-submit").click();
 
     const row = page
@@ -79,7 +85,9 @@ test.describe("Category Management", () => {
     await page.getByTestId("category-delete-confirm").click();
 
     await expect(
-      page.locator("[data-testid^='category-row-']").filter({ hasText: "To Be Deleted" })
+      page
+        .locator("[data-testid^='category-row-']")
+        .filter({ hasText: "To Be Deleted" }),
     ).not.toBeVisible({ timeout: 10000 });
   });
 });

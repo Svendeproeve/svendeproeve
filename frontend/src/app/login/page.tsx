@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Box, TextField, Button, Typography, Link } from '@mui/material';
-import NextLink from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { useSnackbar } from '@/contexts/SnackbarContext';
+import { useState, useEffect } from "react";
+import { Box, TextField, Button, Typography, Link } from "@mui/material";
+import NextLink from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { useSnackbar } from "@/contexts/SnackbarContext";
 
 export default function LoginPage() {
   const router = useRouter();
   const { signin, isAuthenticated, isLoading: authLoading } = useAuth();
   const { showSnackbar } = useSnackbar();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [isAuthenticated, authLoading, router]);
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!email || !password) {
-      showSnackbar('All fields are required', 'error');
+      showSnackbar("All fields are required", "error");
       return;
     }
 
@@ -34,9 +34,9 @@ export default function LoginPage() {
 
     try {
       await signin({ email, password });
-      router.push('/dashboard');
+      router.push("/dashboard");
     } catch (err: any) {
-      showSnackbar(err.message || 'Login failed. Please try again.', 'error');
+      showSnackbar(err.message || "Login failed. Please try again.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -47,24 +47,24 @@ export default function LoginPage() {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'background.default',
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        bgcolor: "background.default",
       }}
     >
       <Typography
         variant="h1"
         data-testid="login-title"
         sx={{
-          fontFamily: 'var(--font-inria-serif), serif',
+          fontFamily: "var(--font-inria-serif), serif",
           fontWeight: 700,
-          letterSpacing: '-0.15em',
-          fontSize: '3rem',
+          letterSpacing: "-0.15em",
+          fontSize: "3rem",
           mb: 8,
-          color: 'white',
+          color: "white",
         }}
       >
         Sortr
@@ -74,13 +74,13 @@ export default function LoginPage() {
         component="form"
         onSubmit={handleSubmit}
         sx={{
-          width: '100%',
+          width: "100%",
           maxWidth: 300,
         }}
       >
         <Typography
           variant="body1"
-          sx={{ mb: 1, color: 'white', fontWeight: 500 }}
+          sx={{ mb: 1, color: "white", fontWeight: 500 }}
         >
           Email
         </Typography>
@@ -92,13 +92,13 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isLoading}
-          inputProps={{ 'data-testid': 'login-email-input' }}
+          inputProps={{ "data-testid": "login-email-input" }}
           sx={{ mb: 2 }}
         />
 
         <Typography
           variant="body1"
-          sx={{ mb: 1, color: 'white', fontWeight: 500 }}
+          sx={{ mb: 1, color: "white", fontWeight: 500 }}
         >
           Password
         </Typography>
@@ -110,16 +110,20 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={isLoading}
-          inputProps={{ 'data-testid': 'login-password-input' }}
+          inputProps={{ "data-testid": "login-password-input" }}
           sx={{ mb: 1 }}
         />
 
-        <Box sx={{ mb: 2, textAlign: 'right' }}>
+        <Box sx={{ mb: 2, textAlign: "right" }}>
           <Link
             component={NextLink}
             href="/forgot-password"
             data-testid="login-forgot-password-link"
-            sx={{ color: 'text.secondary', textDecoration: 'underline', fontSize: '0.875rem' }}
+            sx={{
+              color: "text.secondary",
+              textDecoration: "underline",
+              fontSize: "0.875rem",
+            }}
           >
             Forgot password?
           </Link>
@@ -133,21 +137,21 @@ export default function LoginPage() {
           data-testid="login-submit-button"
           sx={{
             py: 1.5,
-            fontSize: '1.1rem',
+            fontSize: "1.1rem",
             fontWeight: 600,
-            textTransform: 'none',
+            textTransform: "none",
           }}
         >
-          {isLoading ? 'Logging in...' : 'Login'}
+          {isLoading ? "Logging in..." : "Login"}
         </Button>
 
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Don't have an account yet?{' '}
+        <Box sx={{ mt: 2, textAlign: "center" }}>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            Don't have an account yet?{" "}
             <Link
               component={NextLink}
               href="/register"
-              sx={{ color: 'white', textDecoration: 'underline' }}
+              sx={{ color: "white", textDecoration: "underline" }}
             >
               Register here!
             </Link>

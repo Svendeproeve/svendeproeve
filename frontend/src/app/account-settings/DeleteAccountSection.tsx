@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Box,
   Typography,
@@ -12,17 +12,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-} from '@mui/material';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { userApi } from '@/lib/api';
-import { useSnackbar } from '@/contexts/SnackbarContext';
+} from "@mui/material";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { userApi } from "@/lib/api";
+import { useSnackbar } from "@/contexts/SnackbarContext";
 
 export default function DeleteAccountSection() {
   const router = useRouter();
   const { user, token, signout } = useAuth();
   const { showSnackbar } = useSnackbar();
-  const [confirmText, setConfirmText] = useState('');
+  const [confirmText, setConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
@@ -34,21 +34,21 @@ export default function DeleteAccountSection() {
       await userApi.deleteAccount(user.id, token);
       // Sign out and redirect to landing page
       signout();
-      router.push('/');
+      router.push("/");
     } catch (err: any) {
-      showSnackbar(err.message || 'Failed to delete account', 'error');
+      showSnackbar(err.message || "Failed to delete account", "error");
       setIsDeleting(false);
     }
   };
 
   const openConfirmDialog = () => {
-    setConfirmText('');
+    setConfirmText("");
     setShowConfirmDialog(true);
   };
 
   const handleConfirm = () => {
-    if (confirmText !== 'DELETE') {
-      showSnackbar('Please type DELETE to confirm', 'error');
+    if (confirmText !== "DELETE") {
+      showSnackbar("Please type DELETE to confirm", "error");
       return;
     }
     setShowConfirmDialog(false);
@@ -57,18 +57,24 @@ export default function DeleteAccountSection() {
 
   return (
     <Box>
-
-      <Card sx={{ bgcolor: '#2c2c2c', borderColor: '#f44336', borderWidth: 1, borderStyle: 'solid' }}>
+      <Card
+        sx={{
+          bgcolor: "#2c2c2c",
+          borderColor: "#f44336",
+          borderWidth: 1,
+          borderStyle: "solid",
+        }}
+      >
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2, color: '#f44336' }}>
+          <Typography variant="h6" sx={{ mb: 2, color: "#f44336" }}>
             Delete Account
           </Typography>
 
-          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
             Deleting your account is permanent and cannot be undone. This will:
           </Typography>
 
-          <Box component="ul" sx={{ mb: 3, pl: 3, color: 'text.secondary' }}>
+          <Box component="ul" sx={{ mb: 3, pl: 3, color: "text.secondary" }}>
             <li>Delete all your personal data and profile</li>
             <li>
               <strong>Delete organizations you own</strong>, including:
@@ -82,7 +88,10 @@ export default function DeleteAccountSection() {
             <li>Unassign you from all threads in other organizations</li>
           </Box>
 
-          <Typography variant="body2" sx={{ mb: 3, color: '#f44336', fontWeight: 600 }}>
+          <Typography
+            variant="body2"
+            sx={{ mb: 3, color: "#f44336", fontWeight: 600 }}
+          >
             This action cannot be reversed. Please be certain.
           </Typography>
 
@@ -95,7 +104,7 @@ export default function DeleteAccountSection() {
               px: 4,
               py: 1.5,
               fontWeight: 600,
-              textTransform: 'none',
+              textTransform: "none",
             }}
           >
             Delete My Account
@@ -104,13 +113,18 @@ export default function DeleteAccountSection() {
       </Card>
 
       {/* Confirmation Dialog */}
-      <Dialog open={showConfirmDialog} onClose={() => setShowConfirmDialog(false)}>
-        <DialogTitle sx={{ color: '#f44336' }}>Confirm Account Deletion</DialogTitle>
+      <Dialog
+        open={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+      >
+        <DialogTitle sx={{ color: "#f44336" }}>
+          Confirm Account Deletion
+        </DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mb: 2 }}>
             Are you absolutely sure you want to delete your account?
           </Typography>
-          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
             Type <strong>DELETE</strong> to confirm:
           </Typography>
           <TextField
@@ -127,7 +141,7 @@ export default function DeleteAccountSection() {
             onClick={handleConfirm}
             color="error"
             variant="contained"
-            disabled={confirmText !== 'DELETE'}
+            disabled={confirmText !== "DELETE"}
           >
             Delete Account
           </Button>
