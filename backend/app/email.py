@@ -58,7 +58,7 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
         return False
 
 
-def generate_invitation_email(org_name: str, invited_by_email: str, login_link: str) -> str:
+def generate_invitation_email(org_name: str, invited_by_email: str, invite_link: str) -> str:
     return f"""
     <!DOCTYPE html>
     <html>
@@ -75,21 +75,22 @@ def generate_invitation_email(org_name: str, invited_by_email: str, login_link: 
 
             <p><strong>{invited_by_email}</strong> has invited you to join <strong>{org_name}</strong> on Sortr.</p>
 
-            <p>Click the button below to log in and access the organization:</p>
+            <p>Click the button below to accept or decline the invitation:</p>
 
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{login_link}"
+                <a href="{invite_link}"
                    style="background-color: #1976d2; color: white; padding: 14px 28px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                    Go to Sortr
+                    Accept or Decline Invitation
                 </a>
             </div>
 
             <p>Or copy and paste this link into your browser:</p>
             <p style="background-color: #e9ecef; padding: 10px; border-radius: 5px; word-break: break-all;">
-                {login_link}
+                {invite_link}
             </p>
 
             <p style="color: #666; margin-top: 30px; font-size: 0.9em;">
+                This invitation link expires in {settings.invite_expire_days} days.
                 If you weren't expecting this invitation, you can safely ignore this email.
             </p>
         </div>

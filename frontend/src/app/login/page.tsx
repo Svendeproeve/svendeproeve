@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import { Box, TextField, Button, Typography, Link } from "@mui/material";
 import NextLink from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useSnackbar } from "@/contexts/SnackbarContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const { signin, isAuthenticated, isLoading: authLoading } = useAuth();
   const { showSnackbar } = useSnackbar();
 
@@ -18,9 +20,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push("/onboarding");
+      router.push(redirect || "/onboarding");
     }
-  }, [isAuthenticated, authLoading, router]);
+  }, [isAuthenticated, authLoading, router, redirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +36,7 @@ export default function LoginPage() {
 
     try {
       await signin({ email, password });
-      router.push("/onboarding");
+      router.push(redirect || "/onboarding");
     } catch (err: any) {
       showSnackbar(err.message || "Login failed. Please try again.", "error");
     } finally {

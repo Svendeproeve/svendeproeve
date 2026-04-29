@@ -1,4 +1,4 @@
-import { apiFetch } from '../swr-config';
+import { apiFetch, API_BASE_URL } from '../swr-config';
 
 export interface OrganizationCreateData {
   name: string;
@@ -23,6 +23,13 @@ export interface Member {
 export interface InviteMemberData {
   email: string;
   role: 'admin' | 'member';
+}
+
+export interface InviteDetail {
+  org_name: string;
+  invited_by_email: string;
+  is_expired: boolean;
+  already_responded: boolean;
 }
 
 export const organizationApi = {
@@ -98,5 +105,49 @@ export const organizationApi = {
       throw new Error(error.detail || 'Failed to invite member');
     }
     return res.json();
+  },
+
+  leaveOrganization: async (orgId: string, token: string): Promise<void> => {
+    const res = await apiFetch(`/organizations/${orgId}/leave`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to leave organization');
+    }
+  },
+};
+
+export const inviteApi = {
+  getDetails: async (inviteToken: string): Promise<InviteDetail> => {
+    const res = await fetch(`${API_BASE_URL}/invites/${inviteToken}`);
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Invite not found');
+    }
+    return res.json();
+  },
+
+  accept: async (inviteToken: string, authToken: string): Promise<void> => {
+    const res = await apiFetch(`/invites/${inviteToken}/accept`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to accept invite');
+    }
+  },
+
+  decline: async (inviteToken: string, authToken: string): Promise<void> => {
+    const res = await apiFetch(`/invites/${inviteToken}/decline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to decline invite');
+    }
   },
 };

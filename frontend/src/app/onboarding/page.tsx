@@ -15,6 +15,10 @@ import {
   ListItemText,
   Divider,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { IoLogOutOutline } from "react-icons/io5";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -26,12 +30,13 @@ import {
 } from "@/hooks/useOrganizations";
 import { organizationApi } from "@/lib/api";
 import { useSnackbar } from "@/contexts/SnackbarContext";
+import type { Organization } from "@/lib/api/organizations";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const forceSwitch = searchParams.get("switch") === "true";
-  const { token, isAuthenticated, isLoading: authLoading, signout } = useAuth();
+  const { user, token, isAuthenticated, isLoading: authLoading, signout } = useAuth();
   const {
     organizations,
     isLoading: isLoadingOrgs,
@@ -42,6 +47,8 @@ export default function OnboardingPage() {
   const [orgName, setOrgName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [leaveTarget, setLeaveTarget] = useState<Organization | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -100,6 +107,25 @@ export default function OnboardingPage() {
   const handleSelectOrganization = (orgId: string) => {
     setStoredOrgId(orgId);
     router.push("/dashboard");
+  };
+
+  const handleLeaveConfirm = async () => {
+    if (!leaveTarget || !token) return;
+    setIsLeaving(true);
+    try {
+      await organizationApi.leaveOrganization(leaveTarget.id, token);
+      showSnackbar(`Left ${leaveTarget.name}`, "success");
+      const storedOrgId = getStoredOrgId();
+      if (storedOrgId === leaveTarget.id) {
+        localStorage.removeItem("current_org_id");
+      }
+      setLeaveTarget(null);
+      await mutate();
+    } catch (err: any) {
+      showSnackbar(err.message || "Failed to leave organization", "error");
+    } finally {
+      setIsLeaving(false);
+    }
   };
 
   if (authLoading || isLoadingOrgs || !isAuthenticated) return null;
@@ -189,12 +215,31 @@ export default function OnboardingPage() {
                     {index > 0 && (
                       <Divider sx={{ bgcolor: "rgba(255,255,255,0.1)" }} />
                     )}
-                    <ListItem disablePadding>
+                    <ListItem
+                      disablePadding
+                      secondaryAction={
+                        org.owner_user_id !== user?.id ? (
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLeaveTarget(org);
+                            }}
+                            data-testid={`leave-org-${org.id}`}
+                            sx={{ textTransform: "none", mr: 1 }}
+                          >
+                            Leave
+                          </Button>
+                        ) : undefined
+                      }
+                    >
                       <ListItemButton
                         onClick={() => handleSelectOrganization(org.id)}
                         data-testid={`select-org-${org.id}`}
                         sx={{
                           "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
+                          pr: org.owner_user_id !== user?.id ? 10 : undefined,
                         }}
                       >
                         <ListItemText
@@ -304,6 +349,32 @@ export default function OnboardingPage() {
           </Card>
         )}
       </Box>
+
+      {/* Leave Organization Dialog */}
+      <Dialog open={!!leaveTarget} onClose={() => setLeaveTarget(null)}>
+        <DialogTitle>Leave organization?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to leave{" "}
+            <strong>{leaveTarget?.name}</strong>? You will lose access and
+            need a new invitation to rejoin.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setLeaveTarget(null)} disabled={isLeaving}>
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleLeaveConfirm}
+            disabled={isLeaving}
+            data-testid="confirm-leave-org-button"
+          >
+            {isLeaving ? "Leaving..." : "Leave"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

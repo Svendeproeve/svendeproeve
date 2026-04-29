@@ -58,6 +58,13 @@ class MembershipOut(BaseModel):
     invitation_status: Optional[str] = "accepted"
 
 
+class InviteDetailOut(BaseModel):
+    org_name: str
+    invited_by_email: str
+    is_expired: bool
+    already_responded: bool
+
+
 class InviteMemberRequest(BaseModel):
     email: EmailStr
     role: Literal["admin", "member"] = "member"

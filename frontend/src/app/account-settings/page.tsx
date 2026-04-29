@@ -16,15 +16,16 @@ import { useOrganizations } from "@/hooks/useOrganizations";
 import ProfileSection from "./ProfileSection";
 import PasswordSection from "./PasswordSection";
 import DeleteAccountSection from "./DeleteAccountSection";
+import OrganizationsSection from "./OrganizationsSection";
+
+type Section = "profile" | "password" | "organizations" | "delete";
 
 export default function AccountSettingsPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
   const { isLoading: isLoadingOrgs } = useOrganizations();
 
-  const [activeSection, setActiveSection] = useState<
-    "profile" | "password" | "delete"
-  >("profile");
+  const [activeSection, setActiveSection] = useState<Section>("profile");
 
   if (isLoadingAuth || isLoadingOrgs) {
     return (
@@ -39,9 +40,10 @@ export default function AccountSettingsPage() {
     return null;
   }
 
-  const menuItems = [
+  const menuItems: { id: Section; label: string }[] = [
     { id: "profile", label: "Profile" },
     { id: "password", label: "Password" },
+    { id: "organizations", label: "Organizations" },
     { id: "delete", label: "Delete Account" },
   ];
 
@@ -66,11 +68,7 @@ export default function AccountSettingsPage() {
               <ListItem key={item.id} disablePadding>
                 <ListItemButton
                   selected={activeSection === item.id}
-                  onClick={() =>
-                    setActiveSection(
-                      item.id as "profile" | "password" | "delete",
-                    )
-                  }
+                  onClick={() => setActiveSection(item.id)}
                   sx={{
                     borderRadius: 1,
                     mb: 0.5,
@@ -120,6 +118,7 @@ export default function AccountSettingsPage() {
         <Box sx={{ flex: 1 }}>
           {activeSection === "profile" && <ProfileSection />}
           {activeSection === "password" && <PasswordSection />}
+          {activeSection === "organizations" && <OrganizationsSection />}
           {activeSection === "delete" && <DeleteAccountSection />}
         </Box>
       </Box>

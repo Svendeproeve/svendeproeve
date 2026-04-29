@@ -26,5 +26,8 @@ class Settings:
     # Password reset token expiration (in minutes)
     password_reset_expire_minutes: int = int(os.getenv("PASSWORD_RESET_EXPIRE_MINUTES", "60"))
 
+    # Invite token expiration (in days)
+    invite_expire_days: int = int(os.getenv("INVITE_EXPIRE_DAYS", "7"))
+
 
 settings = Settings()

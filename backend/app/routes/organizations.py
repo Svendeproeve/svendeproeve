@@ -1,8 +1,9 @@
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.db import categories_collection, memberships_collection, organizations_collection, users_collection
+from app.db import categories_collection, member_category_access_collection, memberships_collection, organizations_collection, users_collection
 from app.dependencies import get_current_user, require_org_admin, require_org_membership
 from app.config import settings
 from app.email import generate_invitation_email, send_email
@@ -58,13 +59,10 @@ def create_organization(
 @router.get("", response_model=list[OrganizationOut])
 def list_my_organizations(current_user: dict = Depends(get_current_user)):
     user_id = str(current_user["_id"])
-    memberships = list(memberships_collection.find({"user_id": user_id}, {"org_id": 1}))
-
-    # Auto-accept any pending invitations when the user accesses their org list
-    memberships_collection.update_many(
-        {"user_id": user_id, "invitation_status": "pending"},
-        {"$set": {"invitation_status": "accepted"}},
-    )
+    memberships = list(memberships_collection.find(
+        {"user_id": user_id, "invitation_status": {"$ne": "pending"}},
+        {"org_id": 1},
+    ))
 
     org_ids = [parse_object_id(m["org_id"], "org_id") for m in memberships]
     if not org_ids:
@@ -125,19 +123,25 @@ async def invite_existing_user(
             detail="User is already a member of this organization",
         )
 
+    invite_token = secrets.token_urlsafe(32)
+    invite_expires_at = datetime.now(timezone.utc) + timedelta(days=settings.invite_expire_days)
+
     membership = {
         "org_id": org_id,
         "user_id": str(user["_id"]),
         "role": payload.role,
         "created_at": datetime.now(timezone.utc),
         "invitation_status": "pending",
+        "invite_token": invite_token,
+        "invite_expires_at": invite_expires_at,
+        "invited_by_email": current_user["email"],
     }
     memberships_collection.insert_one(membership)
 
     org = organizations_collection.find_one({"_id": parse_object_id(org_id, "org_id")})
     org_name = org["name"] if org else "an organization"
-    login_link = f"{settings.frontend_url}/login"
-    email_html = generate_invitation_email(org_name, current_user["email"], login_link)
+    invite_link = f"{settings.frontend_url}/invite/{invite_token}"
+    email_html = generate_invitation_email(org_name, current_user["email"], invite_link)
     await send_email(
         to_email=user["email"],
         subject=f"You've been invited to {org_name} on Sortr",
@@ -204,3 +208,19 @@ def remove_member(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins can only remove members, not other admins")
 
     memberships_collection.delete_one({"org_id": org_id, "user_id": user_id})
+
+
+@router.delete("/{org_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
+def leave_organization(
+    org_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    user_id = str(current_user["_id"])
+    membership = memberships_collection.find_one({"org_id": org_id, "user_id": user_id})
+    if not membership:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="You are not a member of this organization")
+    if membership["role"] == "owner":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Organization owners cannot leave")
+
+    memberships_collection.delete_one({"org_id": org_id, "user_id": user_id})
+    member_category_access_collection.delete_many({"org_id": org_id, "user_id": user_id})
