@@ -14,7 +14,6 @@ test.describe("Pricing Page", () => {
     ).toBeVisible();
     await expect(page.getByText("0 DKK")).toBeVisible();
 
-    // Check that features are listed
     await expect(
       page.getByText("FREE SMTP CONNECTIONS", { exact: false }),
     ).toBeVisible();
@@ -24,8 +23,6 @@ test.describe("Pricing Page", () => {
     await expect(
       page.getByText("FREE ORGANIZATION USERS", { exact: false }),
     ).toBeVisible();
-
-    // Check register button is visible
     await expect(page.getByRole("button", { name: /register/i })).toBeVisible();
   });
 

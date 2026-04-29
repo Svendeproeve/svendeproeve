@@ -345,7 +345,7 @@ export default function CategoryPage({
                     key={(email.thread_id || "").trim() || email.id}
                     hover
                     onClick={() => {
-                      // Use Mongo email id only — Message-IDs in thread_id break in URL path segments.
+                      // Use Mongo email id only - Message-IDs in thread_id break in URL path segments.
                       router.push(`/categories/${id}/thread/${email.id}`);
                     }}
                     sx={{

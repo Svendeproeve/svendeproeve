@@ -7,17 +7,14 @@ test.describe("UI Consistency", () => {
     }) => {
       await page.goto("/");
 
-      // Get the navbar logo
       const navbarLogo = page.getByText("Sortr").first();
       await expect(navbarLogo).toBeVisible();
 
-      // Check that logo has the serif font family
       const navbarLogoStyles = await navbarLogo.evaluate((el) =>
         window.getComputedStyle(el),
       );
       expect(navbarLogoStyles.fontFamily).toContain("Inria Serif");
 
-      // Footer logo should also be visible
       const footerLogo = page.getByText("Sortr").last();
       await expect(footerLogo).toBeVisible();
 
@@ -95,16 +92,13 @@ test.describe("UI Consistency", () => {
       for (const pagePath of pages) {
         await page.goto(pagePath);
 
-        // Check Pricing link
         await page.getByText("Pricing", { exact: true }).click();
         await expect(page).toHaveURL("/pricing");
 
-        // Go back and check About link
         await page.goto(pagePath);
         await page.getByText("About", { exact: true }).click();
         await expect(page).toHaveURL("/about");
 
-        // Go back and check Login button
         await page.goto(pagePath);
         await page.getByRole("button", { name: /log in/i }).click();
         await expect(page).toHaveURL("/login");
